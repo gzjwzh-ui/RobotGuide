@@ -91,13 +91,11 @@
             android:layout_width="56dp"
             android:layout_height="56dp"
             android:background="@color/colorPrimary"
-            app:cornerRadius="28dp"
             android:gravity="center"
             android:text="🎤"
             android:textSize="28sp"
             android:elevation="2dp"
-            android:contentDescription="语音输入"
-            xmlns:app="http://schemas.android.com/apk/res-auto" />
+            android:contentDescription="语音输入" />
 
         <!-- 输入框 -->
         <EditText
@@ -131,8 +129,6 @@
             android:textColor="#FFFFFF"
             android:textSize="28sp"
             android:elevation="2dp"
-            xmlns:app="http://schemas.android.com/apk/res-auto"
-            app:cornerRadius="28dp"
             android:contentDescription="@string/chat_send" />
 
     </LinearLayout>
