@@ -3,22 +3,16 @@ package com.robot.guide.ui
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
 import androidx.recyclerview.widget.RecyclerView
-import com.robot.guide.R
 import com.robot.guide.data.ChatMessage
 import com.robot.guide.databinding.ItemChatMessageBinding
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 /**
- * 聊天消息列表适配器
+ * 聊天消息列表适配器 - 深蓝科技风
  */
 class ChatAdapter : RecyclerView.Adapter<ChatAdapter.ViewHolder>() {
 
     private val messages = mutableListOf<ChatMessage>()
-    private val dateFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ItemChatMessageBinding.inflate(
@@ -38,11 +32,14 @@ class ChatAdapter : RecyclerView.Adapter<ChatAdapter.ViewHolder>() {
         notifyItemInserted(messages.size - 1)
     }
 
-    fun updateLastMessage(content: String) {
+    fun updateLastMessageWithSource(content: String, sourceText: String, mediaRefs: List<String>) {
         if (messages.isNotEmpty()) {
-            val lastIndex = messages.size - 1
-            messages[lastIndex] = messages[lastIndex].copy(content = content)
-            notifyItemChanged(lastIndex)
+            val lastIdx = messages.size - 1
+            messages[lastIdx] = messages[lastIdx].copy(
+                content = content,
+                mediaRefs = mediaRefs
+            )
+            notifyItemChanged(lastIdx)
         }
     }
 
@@ -64,35 +61,44 @@ class ChatAdapter : RecyclerView.Adapter<ChatAdapter.ViewHolder>() {
 
             if (isUser) {
                 binding.tvUserMessage.text = msg.content
+                binding.userTagRow.visibility = View.VISIBLE
+                binding.tvUserLang.text = "普通话"
+                binding.tvUserConfidence.text = "置信度 95%"
             } else {
-                binding.tvBotMessage.text = msg.content
-                binding.tvSource.text = when (msg.source) {
-                    ChatMessage.Source.LOCAL -> "📚 固定知识库"
-                    ChatMessage.Source.AI -> "🤖 AI生成"
-                    ChatMessage.Source.FALLBACK -> "💬 兜底回复"
-                }
-
-                // 加载状态
+                // 机器人消息
                 if (msg.content.isBlank()) {
                     binding.pbLoading.visibility = View.VISIBLE
-                    binding.tvBotMessage.text = binding.root.context.getString(R.string.chat_thinking)
+                    binding.tvBotMessage.text = "思考中..."
+                    binding.tagRow.visibility = View.GONE
+                    binding.audioPlayBar.visibility = View.GONE
+                    binding.tvSource.text = ""
                 } else {
                     binding.pbLoading.visibility = View.GONE
-                }
-            }
+                    binding.tvBotMessage.text = msg.content
 
-            // 媒体预览（如果有）
-            if (msg.mediaRefs.isNotEmpty()) {
-                val previewContainer = if (isUser) binding.userMediaPreview else binding.botMediaPreview
-                previewContainer.visibility = View.VISIBLE
-                previewContainer.removeAllViews()
-                for (ref in msg.mediaRefs.take(3)) {
-                    val thumb = ImageView(binding.root.context).apply {
-                        // 简化显示，实际应该加载图片/视频缩略图
-                        setBackgroundColor(0xFF333333.toInt())
-                        setPadding(8, 8, 8, 8)
+                    // 来源标签
+                    val sourceText = when (msg.source) {
+                        ChatMessage.Source.LOCAL -> "固定题库"
+                        ChatMessage.Source.AI -> "AI生成"
+                        ChatMessage.Source.FALLBACK -> "兜底回复"
                     }
-                    previewContainer.addView(thumb)
+                    binding.tvSource.text = sourceText
+
+                    // 动作/LED 标签（根据内容简化判断）
+                    if (msg.content.contains("挥手") || msg.content.contains("握手")) {
+                        binding.tagRow.visibility = View.VISIBLE
+                        binding.tvTagAction.visibility = View.VISIBLE
+                        binding.tvTagAction.text = "✋ 挥手"
+                    } else if (msg.content.contains("转向")) {
+                        binding.tagRow.visibility = View.VISIBLE
+                        binding.tvTagAction.visibility = View.VISIBLE
+                        binding.tvTagAction.text = "👤 头部转向"
+                    } else {
+                        binding.tagRow.visibility = View.GONE
+                    }
+
+                    // 语音播放条（模拟每条机器人消息都有语音）
+                    binding.audioPlayBar.visibility = View.VISIBLE
                 }
             }
         }

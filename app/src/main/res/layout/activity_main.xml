@@ -1,110 +1,569 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout
+<LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:orientation="horizontal"
     android:background="@color/bg_dark">
 
-    <!-- 顶部区域 - 欢迎语 -->
+    <!-- ==================== 左栏：人脸检测面板 ==================== -->
     <LinearLayout
-        android:id="@+id/welcomeSection"
+        android:id="@+id/leftPanel"
         android:layout_width="0dp"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_weight="280"
         android:orientation="vertical"
-        android:gravity="center"
-        android:paddingTop="48dp"
+        android:gravity="center_horizontal"
+        android:paddingTop="40dp"
         android:paddingBottom="32dp"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+        android:paddingStart="20dp"
+        android:paddingEnd="12dp">
 
-        <!-- Logo/动画区域 -->
-        <ImageView
-            android:id="@+id/robotAvatar"
-            android:layout_width="120dp"
-            android:layout_height="120dp"
-            android:src="@android:drawable/sym_def_app_icon"
-            android:background="@drawable/bg_card"
-            android:padding="8dp"
-            android:contentDescription="@string/app_name" />
+        <!-- 摄像头预览区域（圆形） -->
+        <FrameLayout
+            android:id="@+id/cameraPreviewWrap"
+            android:layout_width="180dp"
+            android:layout_height="180dp"
+            android:background="@drawable/bg_detect_circle"
+            android:padding="6dp">
 
+            <androidx.camera.view.PreviewView
+                android:id="@+id/cameraPreview"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="fillCenter" />
+
+            <!-- 检测环动画（伪效果） -->
+            <View
+                android:id="@+id/detectRing"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/bg_detect_circle"
+                android:alpha="0" />
+
+        </FrameLayout>
+
+        <!-- HUMAN DETECTED 标签 -->
         <TextView
-            android:id="@+id/tvWelcomeTitle"
+            android:id="@+id/tvHumanStatus"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
-            android:text="@string/main_title"
-            android:textColor="@color/text_primary"
-            android:textSize="28sp"
-            android:textStyle="bold" />
+            android:text="HUMAN DETECTED"
+            android:textColor="@color/colorPrimary"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.1" />
 
         <TextView
-            android:id="@+id/tvWelcomeSubtitle"
+            android:id="@+id/tvDetectDetail"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="@string/main_subtitle"
-            android:textColor="@color/text_secondary"
-            android:textSize="18sp" />
+            android:text="● 检测到 1 人 · 置信度 98%"
+            android:textColor="@color/success"
+            android:textSize="13sp" />
+
+        <!-- 状态卡片 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="28dp"
+            android:background="@drawable/bg_status_card"
+            android:orientation="vertical"
+            android:padding="14dp">
+
+            <!-- 头部状态 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="👤 头部"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp"
+                    android:layout_weight="1" />
+
+                <TextView
+                    android:id="@+id/tvHeadStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="左转 15° · 正常"
+                    android:textColor="@color/text_primary"
+                    android:textSize="12sp" />
+
+            </LinearLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="10dp"
+                android:layout_marginBottom="10dp"
+                android:background="@color/divider" />
+
+            <!-- 语音输入状态 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🎙️ 语音输入"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp"
+                    android:layout_weight="1" />
+
+                <TextView
+                    android:id="@+id/tvVoiceStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="普通话"
+                    android:textColor="@color/colorPrimary"
+                    android:textSize="12sp" />
+
+            </LinearLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="10dp"
+                android:layout_marginBottom="10dp"
+                android:background="@color/divider" />
+
+            <!-- 电量条 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🔋 电量"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp"
+                    android:layout_weight="1" />
+
+                <FrameLayout
+                    android:layout_width="120dp"
+                    android:layout_height="10dp"
+                    android:background="@color/divider">
+
+                    <View
+                        android:id="@+id/batteryFill"
+                        android:layout_width="86%"
+                        android:layout_height="match_parent"
+                        android:background="@color/success" />
+
+                </FrameLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:text="86%"
+                    android:textColor="@color/success"
+                    android:textSize="12sp" />
+
+            </LinearLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="10dp"
+                android:layout_marginBottom="10dp"
+                android:background="@color/divider" />
+
+            <!-- 后端连接 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="📡 后端"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp"
+                    android:layout_weight="1" />
+
+                <TextView
+                    android:id="@+id/tvBackendStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="● 在线"
+                    android:textColor="@color/success"
+                    android:textSize="12sp" />
+
+            </LinearLayout>
+
+        </LinearLayout>
 
     </LinearLayout>
 
-    <!-- 快捷功能区域 -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rvQuickActions"
+    <!-- 分隔线 -->
+    <View
+        android:layout_width="1dp"
+        android:layout_height="match_parent"
+        android:background="@color/divider" />
+
+    <!-- ==================== 中间栏：对话主区域 ==================== -->
+    <LinearLayout
+        android:id="@+id/centerPanel"
         android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:layout_marginStart="32dp"
-        android:layout_marginEnd="32dp"
-        android:layout_marginTop="24dp"
-        android:paddingBottom="32dp"
-        android:clipToPadding="false"
-        app:layout_constraintTop_toBottomOf="@id/welcomeSection"
-        app:layout_constraintBottom_toTopOf="@id/btnQuickChat"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:paddingTop="16dp"
+        android:paddingBottom="16dp"
+        android:paddingStart="24dp"
+        android:paddingEnd="16dp">
 
-    <!-- 底部主要按钮 - 快速对话 -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnQuickChat"
-        android:layout_width="0dp"
-        android:layout_height="72dp"
-        android:layout_marginStart="32dp"
-        android:layout_marginEnd="32dp"
-        android:layout_marginBottom="48dp"
-        android:text="@string/quick_chat"
-        android:textSize="22sp"
-        android:textAllCaps="false"
-        app:cornerRadius="36dp"
-        app:backgroundTint="@color/colorPrimary"
-        app:icon="@android:drawable/ic_btn_speak_now"
-        app:iconSize="32dp"
-        app:iconTint="@color/text_primary"
-        app:iconPadding="16dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        <!-- 顶部标题栏 -->
+        <LinearLayout
+            android:id="@+id/titleBar"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
 
-    <!-- 右下角设置按钮 -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnSettings"
-        style="@style/ButtonIcon"
-        android:layout_width="56dp"
-        android:layout_height="56dp"
-        android:insetTop="0dp"
-        android:insetBottom="0dp"
-        android:insetLeft="0dp"
-        android:insetRight="0dp"
-        app:icon="@android:drawable/ic_menu_manage"
-        app:iconSize="32dp"
-        app:iconTint="@color/text_secondary"
-        android:backgroundTint="@color/bg_card"
-        app:cornerRadius="28dp"
-        android:contentDescription="@string/settings_title"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginBottom="48dp"
-        android:layout_marginEnd="16dp" />
+            <!-- 机器人头像 -->
+            <ImageView
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:background="@drawable/bg_card"
+                android:padding="4dp"
+                android:contentDescription="机器人头像"
+                app:srcCompat="@android:drawable/sym_def_app_icon" />
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+            <!-- 名字 + 在线状态 -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvRobotName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="小胖"
+                    android:textColor="@color/text_primary"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvRobotStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="展厅讲解机器人 · ONLINE"
+                    android:textColor="@color/success"
+                    android:textSize="12sp" />
+
+            </LinearLayout>
+
+            <!-- 语言切换 -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnLanguage"
+                style="@style/ButtonIcon"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:layout_marginStart="auto"
+                android:text="HK 粤语"
+                android:textSize="13sp"
+                app:cornerRadius="20dp"
+                app:backgroundTint="@color/bg_card"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:insetLeft="12dp"
+                android:insetRight="12dp"
+                android:textColor="@color/text_primary" />
+
+            <!-- 三点菜单 -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnMenu"
+                style="@style/ButtonIcon"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginStart="8dp"
+                app:icon="@android:drawable/ic_menu_more"
+                app:iconSize="24dp"
+                app:iconTint="@color/text_primary"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:insetLeft="0dp"
+                android:insetRight="0dp" />
+
+        </LinearLayout>
+
+        <!-- 对话列表 -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvChat"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginTop="12dp"
+            android:clipToPadding="false"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
+            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+            app:reverseLayout="false" />
+
+        <!-- 快捷问题区域 -->
+        <LinearLayout
+            android:id="@+id/quickQuestionArea"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="● 您可以问我这些问题:"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                android:layout_marginBottom="8dp" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvQuickQuestions"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                app:orientation="horizontal" />
+
+        </LinearLayout>
+
+        <!-- 输入区域 -->
+        <LinearLayout
+            android:id="@+id/inputBar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <!-- 语音按钮 -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnVoice"
+                style="@style/ButtonIcon"
+                android:layout_width="52dp"
+                android:layout_height="52dp"
+                app:icon="@android:drawable/ic_btn_speak_now"
+                app:iconSize="24dp"
+                app:iconTint="@color/text_primary"
+                android:backgroundTint="@color/colorPrimary"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:insetLeft="0dp"
+                android:insetRight="0dp"
+                app:cornerRadius="26dp" />
+
+            <!-- 输入框 -->
+            <EditText
+                android:id="@+id/etInput"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="1"
+                android:layout_marginStart="12dp"
+                android:layout_marginEnd="12dp"
+                android:background="@drawable/bg_input_field"
+                android:hint="点击麦克风说话，或输入文字..."
+                android:textColor="@color/text_primary"
+                android:textColorHint="@color/text_hint"
+                android:paddingStart="24dp"
+                android:paddingEnd="24dp"
+                android:singleLine="true"
+                android:imeOptions="actionSend"
+                android:textSize="15sp"
+                android:gravity="center_vertical" />
+
+            <!-- 发送按钮 -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSend"
+                style="@style/ButtonIcon"
+                android:layout_width="52dp"
+                android:layout_height="52dp"
+                app:icon="@android:drawable/ic_menu_send"
+                app:iconSize="22dp"
+                app:iconTint="@color/text_primary"
+                android:backgroundTint="@color/colorPrimary"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:insetLeft="0dp"
+                android:insetRight="0dp"
+                app:cornerRadius="26dp" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- 分隔线 -->
+    <View
+        android:layout_width="1dp"
+        android:layout_height="match_parent"
+        android:background="@color/divider" />
+
+    <!-- ==================== 右栏：固定导航栏 ==================== -->
+    <LinearLayout
+        android:id="@+id/rightPanel"
+        android:layout_width="72dp"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center_horizontal"
+        android:paddingTop="24dp"
+        android:paddingBottom="16dp">
+
+        <!-- 导航项1：首页 -->
+        <LinearLayout
+            android:id="@+id/navHome"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="4dp"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:background="@drawable/bg_nav_selector"
+            android:selected="true">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                app:srcCompat="@android:drawable/sym_def_app_icon"
+                android:contentDescription="首页" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="首页"
+                android:textColor="@color/nav_active"
+                android:textSize="10sp" />
+
+        </LinearLayout>
+
+        <!-- 导航项2：车辆展示 -->
+        <LinearLayout
+            android:id="@+id/navGallery"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="4dp"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:background="@drawable/bg_nav_selector">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                app:srcCompat="@android:drawable/ic_menu_gallery"
+                android:contentDescription="车辆展示" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="车辆"
+                android:textColor="@color/nav_inactive"
+                android:textSize="10sp" />
+
+        </LinearLayout>
+
+        <!-- 导航项3：车辆视频 -->
+        <LinearLayout
+            android:id="@+id/navVideo"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="4dp"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:background="@drawable/bg_nav_selector">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                app:srcCompat="@android:drawable/ic_media_play"
+                android:contentDescription="车辆视频" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="视频"
+                android:textColor="@color/nav_inactive"
+                android:textSize="10sp" />
+
+        </LinearLayout>
+
+        <!-- 导航项4：设置 -->
+        <LinearLayout
+            android:id="@+id/navSettings"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="4dp"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:background="@drawable/bg_nav_selector">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                app:srcCompat="@android:drawable/ic_menu_manage"
+                android:contentDescription="设置" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="设置"
+                android:textColor="@color/nav_inactive"
+                android:textSize="10sp" />
+
+        </LinearLayout>
+
+        <!-- 底部空白区 -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <!-- 定位点 + 版本号 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:paddingBottom="12dp">
+
+            <View
+                android:id="@+id/navIndicator"
+                android:layout_width="12dp"
+                android:layout_height="12dp"
+                android:background="@color/success" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="v2.0"
+                android:textColor="@color/text_hint"
+                android:textSize="11sp" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</LinearLayout>

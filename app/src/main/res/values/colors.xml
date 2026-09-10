@@ -1,31 +1,49 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- 主色调 - 科技蓝 -->
-    <color name="colorPrimary">#2196F3</color>
-    <color name="colorPrimaryDark">#1976D2</color>
-    <color name="colorAccent">#03A9F4</color>
+    <!-- ===== 深蓝科技风主题 ===== -->
 
-    <!-- 背景色 -->
-    <color name="bg_dark">#121212</color>
-    <color name="bg_card">#1E1E1E</color>
-    <color name="bg_input">#2C2C2C</color>
+    <!-- 主色调 - 霓虹青科技感 -->
+    <color name="colorPrimary">#00D4FF</color>
+    <color name="colorPrimaryDark">#0099CC</color>
+    <color name="colorAccent">#00D4FF</color>
+
+    <!-- 背景色 - 深蓝渐变 -->
+    <color name="bg_dark">#0A1628</color>
+    <color name="bg_card">#112240</color>
+    <color name="bg_input">#0D1B2A</color>
+    <color name="bg_surface">#1B2D45</color>
 
     <!-- 文字颜色 -->
     <color name="text_primary">#FFFFFF</color>
-    <color name="text_secondary">#B0B0B0</color>
-    <color name="text_hint">#666666</color>
+    <color name="text_secondary">#8892B0</color>
+    <color name="text_hint">#4A5568</color>
 
     <!-- 对话气泡 -->
-    <color name="bubble_user">#2196F3</color>
-    <color name="bubble_bot">#37474F</color>
+    <color name="bubble_user">#FF6B6B</color>
+    <color name="bubble_bot">#1E3A5F</color>
     <color name="bubble_user_text">#FFFFFF</color>
-    <color name="bubble_bot_text">#FFFFFF</color>
+    <color name="bubble_bot_text">#E2E8F0</color>
 
-    <!-- 其他 -->
-    <color name="divider">#333333</color>
-    <color name="progress">#03A9F4</color>
-    <color name="success">#4CAF50</color>
-    <color name="warning">#FF9800</color>
-    <color name="error">#F44336</color>
+    <!-- 标签颜色 -->
+    <color name="tag_action">#00D4FF</color>
+    <color name="tag_led">#FFD700</color>
+    <color name="tag_source_local">#00D4FF</color>
+    <color name="tag_source_ai">#A855F7</color>
+    <color name="tag_source_fallback">#F59E0B</color>
+
+    <!-- 状态色 -->
+    <color name="divider">#1E3A5F</color>
+    <color name="progress">#00D4FF</color>
+    <color name="success">#10B981</color>
+    <color name="warning">#F59E0B</color>
+    <color name="error">#EF4444</color>
+
+    <!-- 检测面板 -->
+    <color name="detect_circle">#00D4FF</color>
+    <color name="detect_confidence">#10B981</color>
+
+    <!-- 导航栏 -->
+    <color name="nav_active">#00D4FF</color>
+    <color name="nav_inactive">#8892B0</color>
 
 </resources>
