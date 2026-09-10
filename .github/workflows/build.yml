@@ -42,20 +42,20 @@ jobs:
         chmod +x gradlew
 
     - name: 🔧 Build debug APK
-      id: build
-      continue-on-error: true
-      run: ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee build_output.txt; exit ${PIPESTATUS[0]}
+      run: |
+        set -o pipefail
+        ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee build_output.txt
 
     - name: 📝 Upload build log on failure
-      if: always()
+      if: failure()
       uses: actions/upload-artifact@v5
       with:
         name: build-log
         path: build_output.txt
+        if-no-files-found: ignore
         retention-days: 7
 
     - name: 📦 Upload APK artifact
-      if: success()
       uses: actions/upload-artifact@v5
       with:
         name: RobotGuide-APK
