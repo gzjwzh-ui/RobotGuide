@@ -135,7 +135,7 @@ class AppSettings(context: Context) {
     /**
      * 获取实际生效的问候语（替换占位符）
      */
-    fun getGreeting(): String {
+    fun resolveGreeting(): String {
         return greeting.replace("{robot_name}", robotName)
     }
 

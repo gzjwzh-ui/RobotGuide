@@ -47,9 +47,9 @@ class ChatActivity : AppCompatActivity() {
         // 如果是从人脸检测自动打开，可能带开场白参数
         val autoGreeting = intent.getBooleanExtra("auto_greeting", false)
         if (autoGreeting) {
-            addBotMessage(settings.getGreeting(), speak = true)
+            addBotMessage(settings.resolveGreeting(), speak = true)
         } else {
-            addBotMessage(settings.getGreeting(), speak = false)
+            addBotMessage(settings.resolveGreeting(), speak = false)
         }
     }
 
