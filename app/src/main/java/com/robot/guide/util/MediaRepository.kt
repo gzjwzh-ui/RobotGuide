@@ -108,10 +108,10 @@ class MediaRepository(context: Context) {
             description = "经典两厢性能车，搭载 2.0T EA888 引擎，7 秒破百。",
             thumbnail = mockImage(101, 600, 400),
             images = listOf(
-                VehicleImage(mockImage(101, 1200, 800), "前脸"),
-                VehicleImage(mockImage(102, 1200, 800), "侧面线条"),
-                VehicleImage(mockImage(103, 1200, 800), "内饰驾驶舱"),
-                VehicleImage(mockImage(104, 1200, 800), "尾翼")
+                VehicleImage(url = mockImage(101, 1200, 800), caption = "前脸"),
+                VehicleImage(url = mockImage(102, 1200, 800), caption = "侧面线条"),
+                VehicleImage(url = mockImage(103, 1200, 800), caption = "内饰驾驶舱"),
+                VehicleImage(url = mockImage(104, 1200, 800), caption = "尾翼")
             )
         ),
         Vehicle(
@@ -119,9 +119,9 @@ class MediaRepository(context: Context) {
             description = "加长轴距 2791mm，后排腿部空间越级，家用舒适首选。",
             thumbnail = mockImage(201, 600, 400),
             images = listOf(
-                VehicleImage(mockImage(201, 1200, 800), "整车外观"),
-                VehicleImage(mockImage(202, 1200, 800), "后排空间"),
-                VehicleImage(mockImage(203, 1200, 800), "中控大屏")
+                VehicleImage(url = mockImage(201, 1200, 800), caption = "整车外观"),
+                VehicleImage(url = mockImage(202, 1200, 800), caption = "后排空间"),
+                VehicleImage(url = mockImage(203, 1200, 800), caption = "中控大屏")
             )
         ),
         Vehicle(
@@ -129,9 +129,9 @@ class MediaRepository(context: Context) {
             description = "商务中型轿车，EA390 2.0T 高功，动力充沛稳重大气。",
             thumbnail = mockImage(301, 600, 400),
             images = listOf(
-                VehicleImage(mockImage(301, 1200, 800), "外观"),
-                VehicleImage(mockImage(302, 1200, 800), "后排老板位"),
-                VehicleImage(mockImage(303, 1200, 800), "后备箱")
+                VehicleImage(url = mockImage(301, 1200, 800), caption = "外观"),
+                VehicleImage(url = mockImage(302, 1200, 800), caption = "后排老板位"),
+                VehicleImage(url = mockImage(303, 1200, 800), caption = "后备箱")
             )
         ),
         Vehicle(
@@ -139,9 +139,9 @@ class MediaRepository(context: Context) {
             description = "中型 SUV 标杆，四驱系统，7 座可选，适合家庭出游。",
             thumbnail = mockImage(401, 600, 400),
             images = listOf(
-                VehicleImage(mockImage(401, 1200, 800), "外观前脸"),
-                VehicleImage(mockImage(402, 1200, 800), "内饰全景"),
-                VehicleImage(mockImage(403, 1200, 800), "第三排折叠")
+                VehicleImage(url = mockImage(401, 1200, 800), caption = "外观前脸"),
+                VehicleImage(url = mockImage(402, 1200, 800), caption = "内饰全景"),
+                VehicleImage(url = mockImage(403, 1200, 800), caption = "第三排折叠")
             )
         ),
         Vehicle(
@@ -149,9 +149,9 @@ class MediaRepository(context: Context) {
             description = "MEB 纯电平台，续航 600km+，L2 自动驾驶，AR HUD 抬头显示。",
             thumbnail = mockImage(501, 600, 400),
             images = listOf(
-                VehicleImage(mockImage(501, 1200, 800), "外观流线"),
-                VehicleImage(mockImage(502, 1200, 800), "内饰 AR 抬头显示"),
-                VehicleImage(mockImage(503, 1200, 800), "电池底盘")
+                VehicleImage(url = mockImage(501, 1200, 800), caption = "外观流线"),
+                VehicleImage(url = mockImage(502, 1200, 800), caption = "内饰 AR 抬头显示"),
+                VehicleImage(url = mockImage(503, 1200, 800), caption = "电池底盘")
             )
         )
     )

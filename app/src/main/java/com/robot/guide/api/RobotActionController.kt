@@ -138,7 +138,7 @@ class RobotActionController(context: Context) {
                     if (code == 200) conn.inputStream else conn.errorStream
                 )).readText()
                 conn.disconnect()
-                if (code != 200) { onResult(null); return }
+                if (code != 200) { onResult(null); return@Thread }
                 onResult(parseStatus(body))
             } catch (e: Exception) {
                 Log.w(tag, "fetchStatus 异常: ${e.message}")
