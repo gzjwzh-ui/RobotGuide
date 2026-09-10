@@ -1,0 +1,76 @@
+<resources>
+    <string name="app_name">展厅机器人助手</string>
+    <string name="app_name_short">机器人助手</string>
+
+    <!-- 主界面 -->
+    <string name="main_title">你好，我是展厅助手</string>
+    <string name="main_subtitle">有什么可以帮您的吗？</string>
+    <string name="quick_chat">开始对话</string>
+    <string name="quick_gallery">图片展示</string>
+    <string name="quick_video">视频播放</string>
+    <string name="quick_settings">系统设置</string>
+
+    <!-- 对话界面 -->
+    <string name="chat_hint">请输入您的问题…</string>
+    <string name="chat_send">发送</string>
+    <string name="chat_voice_tip">正在聆听…</string>
+    <string name="chat_thinking">思考中…</string>
+    <string name="chat_api_error">AI服务暂时不可用，使用基础回答</string>
+    <string name="chat_no_match">抱歉，我暂时无法回答这个问题，请换一种方式询问~</string>
+
+    <!-- 设置 -->
+    <string name="settings_title">系统设置</string>
+    <string name="settings_ai_title">AI智能配置</string>
+    <string name="settings_ai_api_key">豆包API Key</string>
+    <string name="settings_ai_model">模型ID</string>
+    <string name="settings_ai_use">启用AI辅助</string>
+    <string name="settings_ai_system_prompt">系统提示词</string>
+    <string name="settings_display_title">显示设置</string>
+    <string name="settings_display_auto_show">对话自动展示媒体</string>
+    <string name="settings_display_timeout">屏幕休眠时间(秒)</string>
+    <string name="settings_qa_title">问答库</string>
+    <string name="settings_qa_manage">管理固定问答库</string>
+    <string name="settings_qa_import">导入问答库(JSON)</string>
+    <string name="settings_qa_export">导出问答库</string>
+    <string name="settings_qa_clear">清空问答库</string>
+    <string name="settings_match_threshold">匹配阈值(0-100)</string>
+
+    <!-- 问答库管理 -->
+    <string name="qa_library_title">固定问答库</string>
+    <string name="qa_add">添加问答</string>
+    <string name="qa_empty">还没有问答，点击右上角添加</string>
+    <string name="qa_question">问题</string>
+    <string name="qa_answer">回答</string>
+    <string name="qa_keywords">关键词(逗号分隔)</string>
+    <string name="qa_media_ref">关联媒体ID(可选)</string>
+    <string name="qa_save">保存</string>
+    <string name="qa_delete">删除</string>
+    <string name="qa_edit">编辑</string>
+    <string name="qa_cancel">取消</string>
+    <string name="qa_question_required">请输入问题</string>
+    <string name="qa_answer_required">请输入回答</string>
+    <string name="qa_edit_title">编辑问答</string>
+    <string name="qa_new_title">新建问答</string>
+
+    <!-- 媒体相关 -->
+    <string name="media_title">媒体资源</string>
+    <string name="media_images">图片</string>
+    <string name="media_videos">视频</string>
+    <string name="media_no_file">暂无媒体文件</string>
+
+    <!-- 通用 -->
+    <string name="ok">确定</string>
+    <string name="cancel">取消</string>
+    <string name="save">保存</string>
+    <string name="delete">删除</string>
+    <string name="back">返回</string>
+    <string name="yes">是</string>
+    <string name="no">否</string>
+    <string name="loading">加载中…</string>
+    <string name="error">出错了</string>
+    <string name="confirm_delete">确定要删除吗？</string>
+    <string name="confirm_clear">确定要清空吗？此操作不可恢复！</string>
+    <string name="permission_required">需要存储权限才能使用此功能</string>
+    <string name="voice_permission_required">需要麦克风权限才能使用语音输入</string>
+
+</resources>

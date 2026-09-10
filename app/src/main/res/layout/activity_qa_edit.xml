@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/bg_dark">
+
+    <!-- 顶部栏 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:background="@color/bg_card">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCancel"
+            style="@style/ButtonIcon"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            app:icon="@android:drawable/ic_menu_close_clear_cancel"
+            app:iconSize="24dp"
+            app:iconTint="@color/text_primary"
+            android:contentDescription="@string/qa_cancel"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:insetLeft="0dp"
+            android:insetRight="0dp" />
+
+        <TextView
+            android:id="@+id/tvTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="@string/qa_edit_title"
+            android:textColor="@color/text_primary"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSave"
+            style="@style/ButtonIcon"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            app:icon="@android:drawable/ic_menu_save"
+            app:iconSize="24dp"
+            app:iconTint="@color/colorPrimary"
+            android:contentDescription="@string/save"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:insetLeft="0dp"
+            android:insetRight="0dp" />
+
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:padding="16dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- 问题 -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/qa_question"
+                android:textColor="@color/text_secondary"
+                android:textSize="14sp"
+                android:paddingTop="8dp" />
+
+            <EditText
+                android:id="@+id/etQuestion"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:background="@drawable/bg_input_field"
+                android:backgroundTint="@color/bg_input"
+                android:textColor="@color/text_primary"
+                android:padding="14dp"
+                android:textSize="16sp"
+                android:hint="用户可能的提问..."
+                android:inputType="textMultiLine"
+                android:minHeight="56dp" />
+
+            <!-- 关键词 -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/qa_keywords"
+                android:textColor="@color/text_secondary"
+                android:textSize="14sp"
+                android:paddingTop="16dp" />
+
+            <EditText
+                android:id="@+id/etKeywords"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:background="@drawable/bg_input_field"
+                android:backgroundTint="@color/bg_input"
+                android:textColor="@color/text_primary"
+                android:padding="14dp"
+                android:textSize="16sp"
+                android:hint="展厅,产品,介绍 (提高匹配率)" />
+
+            <!-- 回答 -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/qa_answer"
+                android:textColor="@color/text_secondary"
+                android:textSize="14sp"
+                android:paddingTop="16dp" />
+
+            <EditText
+                android:id="@+id/etAnswer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:background="@drawable/bg_input_field"
+                android:backgroundTint="@color/bg_input"
+                android:textColor="@color/text_primary"
+                android:padding="14dp"
+                android:textSize="16sp"
+                android:hint="机器人的标准回答..."
+                android:inputType="textMultiLine"
+                android:minHeight="120dp"
+                android:gravity="top" />
+
+            <!-- 关联媒体 -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/qa_media_ref"
+                android:textColor="@color/text_secondary"
+                android:textSize="14sp"
+                android:paddingTop="16dp" />
+
+            <EditText
+                android:id="@+id/etMediaRef"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:background="@drawable/bg_input_field"
+                android:backgroundTint="@color/bg_input"
+                android:textColor="@color/text_primary"
+                android:padding="14dp"
+                android:textSize="16sp"
+                android:hint="图片ID或视频文件名，逗号分隔" />
+
+        </LinearLayout>
+
+    </ScrollView>
+
+</LinearLayout>

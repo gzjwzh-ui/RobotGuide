@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg_dark">
+
+    <!-- 顶部栏 -->
+    <LinearLayout
+        android:id="@+id/topBar"
+        android:layout_width="0dp"
+        android:layout_height="56dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:background="@color/bg_card"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnBack"
+            style="@style/ButtonIcon"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            app:icon="@android:drawable/ic_menu_revert"
+            app:iconSize="24dp"
+            app:iconTint="@color/text_primary"
+            android:contentDescription="@string/back"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:insetLeft="0dp"
+            android:insetRight="0dp" />
+
+        <TextView
+            android:id="@+id/tvTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="@string/app_name"
+            android:textColor="@color/text_primary"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <!-- 媒体展示按钮（对话中触发媒体） -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnMediaGallery"
+            style="@style/ButtonIcon"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            app:icon="@android:drawable/ic_menu_gallery"
+            app:iconSize="24dp"
+            app:iconTint="@color/text_primary"
+            android:contentDescription="@string/media_title"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:insetLeft="0dp"
+            android:insetRight="0dp" />
+
+    </LinearLayout>
+
+    <!-- 对话列表 -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvChat"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="8dp"
+        android:clipToPadding="false"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="16dp"
+        android:paddingBottom="16dp"
+        app:layout_constraintTop_toBottomOf="@id/topBar"
+        app:layout_constraintBottom_toTopOf="@id/inputBar"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- 输入区域 -->
+    <LinearLayout
+        android:id="@+id/inputBar"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="12dp"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:background="@color/bg_card"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- 语音按钮 -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnVoice"
+            style="@style/ButtonIcon"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            app:icon="@android:drawable/ic_btn_speak_now"
+            app:iconSize="28dp"
+            app:iconTint="@color/text_primary"
+            android:backgroundTint="@color/colorPrimary"
+            android:contentDescription="语音输入"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:insetLeft="0dp"
+            android:insetRight="0dp"
+            app:cornerRadius="28dp" />
+
+        <!-- 输入框 -->
+        <EditText
+            android:id="@+id/etInput"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="12dp"
+            android:background="@drawable/bg_input_field"
+            android:backgroundTint="@color/bg_input"
+            android:hint="@string/chat_hint"
+            android:textColor="@color/text_primary"
+            android:textColorHint="@color/text_hint"
+            android:padding="14dp"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            android:inputType="textMultiLine"
+            android:imeOptions="actionSend"
+            android:maxLines="4"
+            android:textSize="16sp" />
+
+        <!-- 发送按钮 -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSend"
+            style="@style/ButtonIcon"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            app:icon="@android:drawable/ic_menu_send"
+            app:iconSize="24dp"
+            app:iconTint="@color/text_primary"
+            android:backgroundTint="@color/colorPrimary"
+            android:contentDescription="@string/chat_send"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:insetLeft="0dp"
+            android:insetRight="0dp"
+            app:cornerRadius="28dp" />
+
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

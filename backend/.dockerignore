@@ -1,0 +1,13 @@
+# 排除不需要进入镜像的文件
+__pycache__/
+*.pyc
+*.db
+uploads/
+*.log
+start.py
+start.vbs
+启动*.bat
+run.bat
+test_*.py
+test_*.bat
+requirements.txt

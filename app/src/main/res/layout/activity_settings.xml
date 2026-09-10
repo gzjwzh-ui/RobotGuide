@@ -1,0 +1,264 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/bg_dark">
+
+    <!-- 顶部栏 -->
+    <LinearLayout
+        android:id="@+id/topBar"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:background="@color/bg_card">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnBack"
+            style="@style/ButtonIcon"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            app:icon="@android:drawable/ic_menu_revert"
+            app:iconSize="24dp"
+            app:iconTint="@color/text_primary"
+            android:contentDescription="@string/back"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:insetLeft="0dp"
+            android:insetRight="0dp" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="@string/settings_title"
+            android:textColor="@color/text_primary"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <!-- 占位 -->
+        <View
+            android:layout_width="48dp"
+            android:layout_height="48dp" />
+
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:padding="16dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- AI配置区域 -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/settings_ai_title"
+                android:textColor="@color/text_secondary"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:paddingTop="8dp"
+                android:paddingBottom="12dp" />
+
+            <com.google.android.material.card.MaterialCardView
+                style="@style/CardStyle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <!-- 启用AI -->
+                    <com.google.android.material.switchmaterial.SwitchMaterial
+                        android:id="@+id/swUseAI"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/settings_ai_use"
+                        android:textColor="@color/text_primary"
+                        android:textSize="16sp"
+                        android:padding="8dp" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/divider" />
+
+                    <!-- API Key -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/settings_ai_api_key"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="14sp"
+                        android:paddingTop="12dp" />
+
+                    <EditText
+                        android:id="@+id/etApiKey"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:background="@drawable/bg_input_field"
+                        android:backgroundTint="@color/bg_input"
+                        android:textColor="@color/text_primary"
+                        android:padding="12dp"
+                        android:textSize="14sp"
+                        android:inputType="textPassword"
+                        android:hint="在此粘贴豆包API Key" />
+
+                    <!-- 模型ID -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/settings_ai_model"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="14sp"
+                        android:paddingTop="16dp" />
+
+                    <EditText
+                        android:id="@+id/etModelId"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:background="@drawable/bg_input_field"
+                        android:backgroundTint="@color/bg_input"
+                        android:textColor="@color/text_primary"
+                        android:padding="12dp"
+                        android:textSize="14sp"
+                        android:hint="例如: doubao-pro-32k" />
+
+                    <!-- 系统提示词 -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/settings_ai_system_prompt"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="14sp"
+                        android:paddingTop="16dp" />
+
+                    <EditText
+                        android:id="@+id/etSystemPrompt"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:background="@drawable/bg_input_field"
+                        android:backgroundTint="@color/bg_input"
+                        android:textColor="@color/text_primary"
+                        android:padding="12dp"
+                        android:textSize="14sp"
+                        android:inputType="textMultiLine"
+                        android:lines="3"
+                        android:gravity="top"
+                        android:hint="定义机器人身份和行为..." />
+
+                    <!-- 匹配阈值 -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/settings_match_threshold"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="14sp"
+                        android:paddingTop="16dp" />
+
+                    <SeekBar
+                        android:id="@+id/sbThreshold"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:max="100"
+                        android:progress="70"
+                        android:progressTint="@color/colorPrimary" />
+
+                    <TextView
+                        android:id="@+id/tvThresholdValue"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:textColor="@color/colorAccent"
+                        android:textSize="16sp"
+                        android:text="70" />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- 问答库区域 -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/settings_qa_title"
+                android:textColor="@color/text_secondary"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:paddingTop="8dp"
+                android:paddingBottom="12dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_card"
+                android:padding="16dp"
+                android:layout_marginBottom="24dp">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnManageQA"
+                    style="@style/ButtonPrimary"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/settings_qa_manage" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnImportQA"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:backgroundTint="@color/bg_input"
+                    android:textColor="@color/text_primary"
+                    android:text="@string/settings_qa_import" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnExportQA"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:backgroundTint="@color/bg_input"
+                    android:textColor="@color/text_primary"
+                    android:text="@string/settings_qa_export" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnClearQA"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:backgroundTint="@color/error"
+                    android:textColor="@color/text_primary"
+                    android:text="@string/settings_qa_clear" />
+
+            </LinearLayout>
+
+            <!-- 保存按钮 -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSave"
+                style="@style/ButtonPrimary"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:text="@string/save"
+                android:textSize="18sp" />
+
+        </LinearLayout>
+
+    </ScrollView>
+
+</LinearLayout>

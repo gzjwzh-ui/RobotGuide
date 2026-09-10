@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>展厅机器人管理后台 v2.0</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { background: #0f172a; }
+  .card { background: #1e293b; border-radius: 12px; }
+  .btn { padding: 8px 16px; border-radius: 8px; font-weight: 500; cursor: pointer; transition: all .15s; border: none; }
+  .btn-primary { background: #3b82f6; color: white; }
+  .btn-primary:hover { background: #2563eb; }
+  .btn-danger { background: #ef4444; color: white; }
+  .btn-danger:hover { background: #dc2626; }
+  .btn-success { background: #10b981; color: white; }
+  .btn-success:hover { background: #059669; }
+  .btn-ghost { background: #334155; color: #e2e8f0; }
+  .btn-ghost:hover { background: #475569; }
+  .input { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 10px 12px; color: #e2e8f0; width: 100%; box-sizing: border-box; }
+  .input:focus { outline: none; border-color: #3b82f6; }
+  textarea.input { min-height: 60px; resize: vertical; font-family: inherit; }
+  .tab { padding: 10px 16px; cursor: pointer; color: #94a3b8; border-bottom: 2px solid transparent; white-space: nowrap; }
+  .tab.active { color: #3b82f6; border-bottom-color: #3b82f6; }
+  .lib-item { background: #0f172a; padding: 14px; border-radius: 10px; border-left: 3px solid #3b82f6; }
+  .lib-item.default { border-left-color: #10b981; }
+  .qa-item { background: #0f172a; padding: 14px; border-radius: 10px; border-left: 3px solid #3b82f6; margin-bottom: 12px; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 12px; }
+  .badge-green { background: #065f46; color: #6ee7b7; }
+  .badge-blue { background: #1e40af; color: #93c5fd; }
+  .badge-yellow { background: #92400e; color: #fcd34d; }
+  .badge-gray { background: #374151; color: #d1d5db; }
+  .lang-en { color: #60a5fa; }
+  .lang-yue { color: #a78bfa; }
+  .toast { position: fixed; top: 20px; right: 20px; padding: 12px 20px; border-radius: 8px; color: white; z-index: 1000; animation: slideIn .2s; }
+  .toast-ok { background: #10b981; }
+  .toast-err { background: #ef4444; }
+  @keyframes slideIn { from { transform: translateX(120%); } to { transform: translateX(0); } }
+  .modal-mask { position: fixed; inset: 0; background: rgba(0,0,0,.7); display: flex; align-items: center; justify-content: center; z-index: 100; }
+  .modal { background: #1e293b; border-radius: 14px; padding: 24px; width: 92%; max-width: 600px; max-height: 92vh; overflow-y: auto; }
+  .lang-switch { display: flex; gap: 4px; margin-bottom: 12px; }
+  .lang-switch button { flex: 1; padding: 6px; background: #334155; color: #94a3b8; border-radius: 6px; font-size: 13px; cursor: pointer; border: 1px solid transparent; }
+  .lang-switch button.active { background: #1e40af; color: white; border-color: #3b82f6; }
+  select.input { padding: 10px; }
+</style>
+</head>
+<body class="text-slate-200 min-h-screen">
+
+<div class="max-w-6xl mx-auto px-4 py-6">
+
+  <!-- 顶部 -->
+  <div class="flex items-center justify-between mb-6 flex-wrap gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-white">🤖 展厅机器人管理后台</h1>
+      <p class="text-slate-400 text-sm mt-1" id="statusBar">连接中…</p>
+    </div>
+    <div class="flex gap-2">
+      <button class="btn btn-ghost" onclick="showLibForm()">➕ 新建题库</button>
+      <button class="btn btn-success" onclick="syncNow()">🔄 同步到机器人</button>
+    </div>
+  </div>
+
+  <!-- Tab -->
+  <div class="flex gap-1 border-b border-slate-700 mb-6 overflow-x-auto">
+    <div class="tab active" data-tab="libs" onclick="switchTab('libs')">📚 题库 & 问答</div>
+    <div class="tab" data-tab="vehicles" onclick="switchTab('vehicles')">🚗 车辆管理</div>
+    <div class="tab" data-tab="voice" onclick="switchTab('voice')">🔊 语音测试</div>
+    <div class="tab" data-tab="config" onclick="switchTab('config')">⚙️ 机器人设置</div>
+    <div class="tab" data-tab="api" onclick="switchTab('api')">🔗 AI参数</div>
+  </div>
+
+  <!-- ============ 题库 & 问答（左右分栏） ============ -->
+  <div id="tab-libs" class="tab-content">
+    <div class="grid md:grid-cols-[280px_1fr] gap-4">
+      <!-- 左: 题库列表 -->
+      <div class="card p-3 self-start sticky top-4">
+        <div class="flex items-center justify-between mb-3 px-1">
+          <h3 class="font-bold text-white">📚 题库列表</h3>
+          <button class="btn btn-primary text-sm" onclick="showLibForm()">➕ 新建</button>
+        </div>
+        <div id="libSideList" class="space-y-2"></div>
+      </div>
+
+      <!-- 右: 当前题库的问答 -->
+      <div class="card p-5">
+        <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <div>
+            <h3 class="text-xl font-bold text-white" id="curLibName">请选择题库</h3>
+            <p class="text-slate-400 text-sm" id="curLibDesc">← 从左侧选择一个题库开始编辑</p>
+          </div>
+          <div class="flex gap-2">
+            <button class="btn btn-ghost text-sm" onclick="editCurrentLib()">✏️ 编辑题库</button>
+            <button class="btn btn-primary" onclick="showQAForm()">➕ 新建问答</button>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3 mb-4 flex-wrap">
+          <input class="input flex-1" id="qaSearch" oninput="renderQA()" placeholder="🔍 在当前题库中搜索问答..." style="min-width:200px">
+          <span class="text-slate-400 text-sm" id="qaCount"></span>
+        </div>
+
+        <div id="qaList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 车辆管理 ============ -->
+  <div id="tab-vehicles" class="tab-content hidden">
+    <div class="grid md:grid-cols-[320px_1fr] gap-4">
+      <!-- 左: 车辆列表 -->
+      <div class="card p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-sm font-semibold text-white">🚗 车辆列表 <span id="vhCount" class="text-slate-500 text-xs"></span></h3>
+          <button class="btn btn-primary text-sm" onclick="showVehicleForm()">➕ 新车</button>
+        </div>
+        <div id="vhList" class="space-y-2 max-h-[500px] overflow-y-auto"></div>
+      </div>
+      <!-- 右: 车辆详情 + 图片 -->
+      <div class="card p-4">
+        <div id="vhEmpty" class="text-center text-slate-500 py-20">👈 从左侧选择或新建车辆</div>
+        <div id="vhDetail" class="hidden space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-bold text-white" id="vhName">—</h3>
+            <div class="flex gap-2">
+              <button class="btn btn-ghost text-sm" onclick="showVehicleForm(editVh)">✏️ 编辑</button>
+              <button class="btn btn-danger text-sm" onclick="deleteVehicle()">🗑️ 删除</button>
+            </div>
+          </div>
+          <div class="grid grid-cols-3 gap-3 text-sm">
+            <div class="bg-slate-800 p-2 rounded"><span class="text-slate-500">品牌</span> <span id="vhBrand" class="text-white float-right">—</span></div>
+            <div class="bg-slate-800 p-2 rounded"><span class="text-slate-500">年份</span> <span id="vhYear" class="text-white float-right">—</span></div>
+            <div class="bg-slate-800 p-2 rounded"><span class="text-slate-500">类别</span> <span id="vhCat" class="text-white float-right">—</span></div>
+          </div>
+          <div>
+            <div class="text-xs text-slate-500 mb-1">🇨🇳 中文简介</div>
+            <div id="vhDesc" class="text-sm text-slate-200 bg-slate-800 p-3 rounded leading-relaxed">—</div>
+          </div>
+          <div>
+            <div class="text-xs text-slate-500 mb-1">🇬🇧 English</div>
+            <div id="vhDescEn" class="text-sm text-slate-200 bg-slate-800 p-3 rounded leading-relaxed">—</div>
+          </div>
+          <div>
+            <div class="text-xs text-slate-500 mb-1">🇭🇰 粵語</div>
+            <div id="vhDescYue" class="text-sm text-slate-200 bg-slate-800 p-3 rounded leading-relaxed">—</div>
+          </div>
+
+          <!-- 图片管理 -->
+          <div class="pt-3 border-t border-slate-700">
+            <div class="flex items-center justify-between mb-3">
+              <h4 class="text-sm font-semibold text-white">📷 车辆图片 <span id="imgCount" class="text-slate-500 text-xs"></span></h4>
+              <label class="btn btn-success text-sm cursor-pointer">
+                📤 上传图片
+                <input type="file" multiple accept="image/*" class="hidden" onchange="uploadVhImg(this)">
+              </label>
+            </div>
+            <div id="imgGrid" class="grid grid-cols-4 gap-2"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 语音测试 ============ -->
+  <div id="tab-voice" class="tab-content hidden">
+    <div class="card p-6 space-y-5">
+      <h2 class="text-lg font-semibold text-white">🔊 三语语音合成测试</h2>
+      <p class="text-slate-400 text-sm">支持 普通话 / 粤语 / 英文。后端使用微软 edge-tts 引擎（免费高质量）。</p>
+
+      <div id="ttsStatus" class="text-sm"></div>
+
+      <!-- 语言切换 -->
+      <div class="flex gap-2 flex-wrap">
+        <button class="btn btn-ghost voice-lang-btn active" data-lang="zh-CN" onclick="selectVoiceLang('zh-CN')">🇨🇳 普通话</button>
+        <button class="btn btn-ghost voice-lang-btn" data-lang="zh-HK" onclick="selectVoiceLang('zh-HK')">🇭🇰 粤语</button>
+        <button class="btn btn-ghost voice-lang-btn" data-lang="en-US" onclick="selectVoiceLang('en-US')">🇬🇧 英语</button>
+      </div>
+
+      <!-- 声音选择 -->
+      <div>
+        <label class="text-sm text-slate-400 block mb-1">选择声音</label>
+        <div id="voiceList" class="grid grid-cols-2 md:grid-cols-3 gap-2"></div>
+      </div>
+
+      <!-- 语速 -->
+      <div>
+        <label class="text-sm text-slate-400 block mb-1">语速: <span id="rateVal" class="text-blue-400 font-bold">+0%</span></label>
+        <input type="range" class="w-full" id="ttsRate" min="-50" max="100" value="0" oninput="document.getElementById('rateVal').innerText='+'+this.value+'%'">
+      </div>
+
+      <!-- 测试文本 -->
+      <div>
+        <label class="text-sm text-slate-400 block mb-1">测试文本</label>
+        <textarea class="input" id="ttsText" rows="3">您好！我是展厅讲解机器人小胖，很高兴为您服务！</textarea>
+      </div>
+
+      <!-- 快捷句子 -->
+      <div>
+        <label class="text-sm text-slate-400 block mb-2">快捷测试</label>
+        <div class="flex gap-2 flex-wrap">
+          <button class="btn btn-ghost text-sm" onclick="setTtsText('您好，欢迎光临展厅！我是小胖，有什么可以帮您的吗？')">普通话问候</button>
+          <button class="btn btn-ghost text-sm" onclick="setTtsText('您好，欢迎光临！我係小胖，有咩可以帮到您？')">粤语问候</button>
+          <button class="btn btn-ghost text-sm" onclick="setTtsText('Hello! Welcome to the exhibition! I am Bob, how can I help you?')">English</button>
+        </div>
+      </div>
+
+      <!-- 播放按钮 -->
+      <div class="flex items-center gap-3">
+        <button class="btn btn-primary text-base" id="btnPlay" onclick="playTTS()">▶️ 试听</button>
+        <audio id="audio" controls class="flex-1"></audio>
+      </div>
+
+      <!-- 浏览器内置 TTS 备用方案 -->
+      <details class="bg-slate-800/50 p-4 rounded-lg">
+        <summary class="cursor-pointer text-slate-300">💡 备用方案：使用浏览器内置语音（无需安装 edge-tts）</summary>
+        <div class="mt-3 space-y-2 text-sm text-slate-400">
+          <p>如果后端还没安装 edge-tts，可以用浏览器自带的语音合成试听。</p>
+          <div class="flex gap-2 flex-wrap">
+            <button class="btn btn-ghost text-sm" onclick="browserTTS('zh-CN')">🔊 浏览器普通话</button>
+            <button class="btn btn-ghost text-sm" onclick="browserTTS('zh-HK')">🔊 浏览器粤语</button>
+            <button class="btn btn-ghost text-sm" onclick="browserTTS('en-US')">🔊 浏览器英语</button>
+          </div>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <!-- ============ 机器人设置 ============ -->
+  <div id="tab-config" class="tab-content hidden">
+    <div class="card p-6 space-y-4">
+      <h2 class="text-lg font-semibold text-white">🆔 机器人身份</h2>
+      <div class="grid md:grid-cols-2 gap-4">
+        <div>
+          <label class="text-sm text-slate-400 block mb-1">机器人名字</label>
+          <input class="input" id="cfg_robot_name">
+        </div>
+        <div>
+          <label class="text-sm text-slate-400 block mb-1">语言模式</label>
+          <select class="input" id="cfg_language">
+            <option value="auto">🎯 自动检测（用户说啥语言就用啥）</option>
+            <option value="zh-CN">🇨🇳 普通话</option>
+            <option value="yue-HK">🇭🇰 粤语</option>
+            <option value="en-US">🇬🇧 英语</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="text-sm text-slate-400 block mb-1">开场白（支持 {robot_name} 占位）</label>
+        <input class="input" id="cfg_greeting">
+      </div>
+      <div>
+        <label class="text-sm text-slate-400 block mb-1">自动唤醒词（逗号分隔）</label>
+        <input class="input" id="cfg_auto_wake_words">
+      </div>
+      <div class="pt-2 border-t border-slate-700">
+        <h2 class="text-lg font-semibold text-white mb-3">👤 自动唤醒</h2>
+        <label class="flex items-center gap-3 cursor-pointer mb-2">
+          <input type="checkbox" id="cfg_person_detection" class="w-5 h-5 rounded">
+          <span>启用人体检测自动问候（前摄摄像头）</span>
+        </label>
+        <div>
+          <label class="text-sm text-slate-400 block mb-1">无操作超时（分钟）</label>
+          <input type="number" class="input" id="cfg_idle_timeout" style="width:100px">
+        </div>
+      </div>
+      <div class="flex justify-end pt-2">
+        <button class="btn btn-primary" onclick="saveConfig()">💾 保存设置</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ AI参数 ============ -->
+  <div id="tab-api" class="tab-content hidden">
+    <div class="card p-6 space-y-4">
+      <label class="flex items-center gap-3 cursor-pointer">
+        <input type="checkbox" id="cfg_use_ai" class="w-5 h-5 rounded">
+        <span>启用 AI 辅助回答（问答库没匹配到时调用豆包）</span>
+      </label>
+      <div>
+        <label class="text-sm text-slate-400 block mb-1">豆包 API Key</label>
+        <input class="input font-mono" id="cfg_api_key" type="password">
+      </div>
+      <div>
+        <label class="text-sm text-slate-400 block mb-1">模型 ID</label>
+        <input class="input font-mono" id="cfg_model_id">
+      </div>
+      <div>
+        <label class="text-sm text-slate-400 block mb-1">系统提示词</label>
+        <textarea class="input" id="cfg_system_prompt"></textarea>
+      </div>
+      <div>
+        <label class="text-sm text-slate-400 block mb-1">匹配阈值: <span id="thVal" class="text-blue-400 font-bold">60</span></label>
+        <input type="range" class="w-full" id="cfg_match_threshold" min="30" max="95" oninput="document.getElementById('thVal').innerText=this.value">
+      </div>
+      <div class="flex justify-end pt-2">
+        <button class="btn btn-primary" onclick="saveConfig()">💾 保存</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ============ 题库表单 Modal ============ -->
+<div id="libModal" class="modal-mask hidden" onclick="if(event.target===this)closeLibModal()">
+  <div class="modal">
+    <h3 class="text-xl font-bold mb-4 text-white" id="libModalTitle">新建题库</h3>
+    <input type="hidden" id="libEditId">
+    <div class="space-y-3">
+      <div>
+        <label class="text-sm text-slate-400 block mb-1">题库名称 *</label>
+        <input class="input" id="libF_name" placeholder="如：健稳汽车历史">
+      </div>
+      <div>
+        <label class="text-sm text-slate-400 block mb-1">描述</label>
+        <input class="input" id="libF_desc" placeholder="关于什么内容的题库">
+      </div>
+    </div>
+    <div class="flex justify-end gap-3 mt-5">
+      <button class="btn btn-ghost" onclick="closeLibModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveLib()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 问答表单 Modal ============ -->
+<div id="qaModal" class="modal-mask hidden" onclick="if(event.target===this)closeQAModal()">
+  <div class="modal">
+    <h3 class="text-xl font-bold mb-4 text-white" id="qaModalTitle">新建问答</h3>
+    <input type="hidden" id="qaEditId">
+    <div class="space-y-4">
+      <!-- 选择题库 -->
+      <div>
+        <label class="text-sm text-slate-400 block mb-1">所属题库 *</label>
+        <select class="input" id="qaF_lib"></select>
+      </div>
+
+      <!-- 三语切换 -->
+      <div class="lang-switch">
+        <button onclick="switchLangTab('zh')" id="tabZh" class="active">🇨🇳 中文(主)</button>
+        <button onclick="switchLangTab('en')" id="tabEn">🇬🇧 英文</button>
+        <button onclick="switchLangTab('yue')" id="tabYue">🇭🇰 粤语</button>
+      </div>
+
+      <!-- 中文 -->
+      <div id="langZh">
+        <div>
+          <label class="text-sm text-slate-400 block mb-1">问题（中文）*</label>
+          <input class="input" id="qaF_question" placeholder="展厅有什么展品？">
+        </div>
+        <div class="mt-3">
+          <label class="text-sm text-slate-400 block mb-1">回答（中文）*</label>
+          <textarea class="input" id="qaF_answer" placeholder="我们展示了..."></textarea>
+        </div>
+      </div>
+
+      <!-- 英文 -->
+      <div id="langEn" class="hidden">
+        <div>
+          <label class="text-sm lang-en block mb-1">Question (EN)</label>
+          <input class="input" id="qaF_question_en" placeholder="What do you exhibit?">
+        </div>
+        <div class="mt-3">
+          <label class="text-sm lang-en block mb-1">Answer (EN)</label>
+          <textarea class="input" id="qaF_answer_en" placeholder="We exhibit..."></textarea>
+        </div>
+      </div>
+
+      <!-- 粤语 -->
+      <div id="langYue" class="hidden">
+        <div>
+          <label class="text-sm lang-yue block mb-1">問題（粵語）</label>
+          <input class="input" id="qaF_question_yue" placeholder="展廳有咩展品？">
+        </div>
+        <div class="mt-3">
+          <label class="text-sm lang-yue block mb-1">回答（粵語）</label>
+          <textarea class="input" id="qaF_answer_yue" placeholder="我哋展廳..."></textarea>
+        </div>
+      </div>
+
+      <div>
+        <label class="text-sm text-slate-400 block mb-1">关键词（逗号分隔，提高匹配率）</label>
+        <input class="input" id="qaF_keywords" placeholder="展厅,展品,介绍">
+      </div>
+    </div>
+    <div class="flex justify-end gap-3 mt-5">
+      <button class="btn btn-ghost" onclick="closeQAModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveQA()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = "";
+let libs = [];
+let qaList = [];
+let selectedLibId = null;
+
+// ========= 初始化 =========
+async function init() {
+  try {
+    await Promise.all([loadLibs(), loadQA(), loadConfig(), loadVoices()]);
+    setStatus("✅ 已连接", true);
+  } catch(e) {
+    setStatus("❌ 后端未启动 - 请运行 python server.py", false);
+  }
+}
+let currentVoiceLang = "zh-CN";
+let voiceData = null;
+let selectedVoice = null;
+
+async function loadVoices() {
+  try {
+    const r = await fetch(API + "/api/voices");
+    voiceData = await r.json();
+    const el = document.getElementById("ttsStatus");
+    if (voiceData.available) {
+      el.innerHTML = '<span class="text-green-400">✅ edge-tts 已就绪</span>';
+    } else {
+      el.innerHTML = '<span class="text-yellow-400">⚠️ edge-tts 未安装 — 浏览器内置 TTS 可用作备用（见下）</span>';
+    }
+    selectVoiceLang("zh-CN");
+  } catch(e) {}
+}
+function selectVoiceLang(lang) {
+  currentVoiceLang = lang;
+  document.querySelectorAll(".voice-lang-btn").forEach(b => {
+    b.classList.toggle("active", b.dataset.lang === lang);
+    b.style.background = b.dataset.lang === lang ? "#1e40af" : "";
+    b.style.color = b.dataset.lang === lang ? "white" : "";
+  });
+  renderVoiceList();
+  // 自动切换默认测试文本
+  const samples = {
+    "zh-CN": "您好！我是展厅讲解机器人小胖，很高兴为您服务！",
+    "zh-HK": "您好！歡迎光臨展廳！我係小胖，有咩可以幫到您？",
+    "en-US": "Hello! Welcome to the exhibition! I am Bob, how can I help you?"
+  };
+  document.getElementById("ttsText").value = samples[lang] || "";
+}
+function renderVoiceList() {
+  const voices = (voiceData?.voices || {})[currentVoiceLang] || [];
+  selectedVoice = voices[0]?.voice || null;
+  const el = document.getElementById("voiceList");
+  el.innerHTML = voices.map((v, i) => `
+    <div onclick="selectVoice('${v.voice}', this)" class="voice-chip" style="cursor:pointer;padding:10px 12px;border-radius:8px;background:${i===0?'#1e40af':'#0f172a'};border:1px solid ${i===0?'#3b82f6':'#334155'};font-size:14px;transition:all .15s">
+      <span class="${v.gender==='female'?'lang-en':'lang-yue'}">${v.gender==='female'?'👩':'👨'}</span>
+      <span class="ml-1">${v.name}</span>
+    </div>
+  `).join("") || '<div class="text-slate-500 col-span-full">无可用声音</div>';
+}
+function selectVoice(v, el) {
+  selectedVoice = v;
+  document.querySelectorAll(".voice-chip").forEach(c => {
+    c.style.background = "#0f172a";
+    c.style.borderColor = "#334155";
+  });
+  el.style.background = "#1e40af";
+  el.style.borderColor = "#3b82f6";
+}
+function setTtsText(t) { document.getElementById("ttsText").value = t; }
+
+async function playTTS() {
+  const text = document.getElementById("ttsText").value.trim();
+  const rate = "+" + document.getElementById("ttsRate").value + "%";
+  if (!text) { toast("请输入文本", false); return; }
+  if (!voiceData?.available) { toast("edge-tts 未安装，请用下方浏览器内置方案", false); return; }
+  const btn = document.getElementById("btnPlay");
+  btn.disabled = true; btn.innerText = "⏳ 合成中...";
+  try {
+    const r = await fetch(API + "/api/tts", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({text, voice: selectedVoice, rate})
+    });
+    if (!r.ok) throw new Error((await r.json()).error || "生成失败");
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const audio = document.getElementById("audio");
+    audio.src = url;
+    audio.play();
+    toast("🔊 播放中...");
+  } catch(e) { toast("❌ " + e.message, false); }
+  btn.disabled = false; btn.innerText = "▶️ 试听";
+}
+
+// 浏览器内置 TTS (备用)
+function browserTTS(lang) {
+  if (!window.speechSynthesis) { toast("浏览器不支持语音合成", false); return; }
+  window.speechSynthesis.cancel();
+  const text = document.getElementById("ttsText").value;
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = lang;
+  u.rate = 1.0;
+  // 尝试匹配对应语言的声音
+  const voices = window.speechSynthesis.getVoices();
+  const match = voices.find(v => v.lang.startsWith(lang.split("-")[0]) && v.lang.includes(lang.split("-")[1]));
+  if (match) u.voice = match;
+  else {
+    const partial = voices.find(v => v.lang.startsWith(lang.split("-")[0]));
+    if (partial) u.voice = partial;
+  }
+  window.speechSynthesis.speak(u);
+  toast("🔊 浏览器播放中...");
+}
+async function health() { try { await fetch(API + "/api/health"); setStatus("✅ 已连接", true); return true; } catch(e) { setStatus("❌ 后端未启动", false); return false; } }
+function setStatus(msg, ok) {
+  const el = document.getElementById("statusBar");
+  el.textContent = msg;
+  el.className = ok ? "text-green-400 text-sm mt-1" : "text-red-400 text-sm mt-1";
+}
+function switchTab(name) {
+  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === name));
+  document.querySelectorAll(".tab-content").forEach(c => c.classList.add("hidden"));
+  document.getElementById("tab-" + name).classList.remove("hidden");
+  if (name === "vehicles") loadVehicles();
+}
+
+// ========= 题库 =========
+async function loadLibs() {
+  const r = await fetch(API + "/api/libraries");
+  libs = await r.json();
+  if (libs.length && !selectedLibId) {
+    selectedLibId = libs.find(l => l.is_default === 1)?.id || libs[0].id;
+  }
+  renderLibs();
+  updateCurLibHeader();
+  renderQA();
+}
+function renderLibs() {
+  const el = document.getElementById("libSideList");
+  el.innerHTML = libs.map(l => {
+    const active = l.id === selectedLibId;
+    return `<div onclick="selectLib(${l.id})" class="lib-chip ${active ? 'active' : ''}" data-id="${l.id}" style="cursor:pointer;padding:10px 12px;border-radius:8px;border-left:3px solid ${active?'#3b82f6':(l.is_default===1?'#10b981':'#334155')};background:${active?'#1e40af':'#0f172a'};transition:all .15s">
+      <div class="flex items-center justify-between">
+        <div class="font-semibold text-sm ${active?'text-white':'text-slate-200'}">${l.is_default===1?'⭐ ':''}${escape(l.name)}</div>
+        <div class="text-xs ${active?'text-blue-200':'text-slate-400'}">${l.qa_count}条</div>
+      </div>
+      ${l.description ? `<div class="text-xs ${active?'text-blue-200':'text-slate-500'} mt-1 truncate">${escape(l.description)}</div>` : ''}
+    </div>`;
+  }).join("") || `<div class="text-center text-slate-500 text-sm py-8">暂无题库<br>点右上角新建</div>`;
+}
+function selectLib(id) {
+  selectedLibId = id;
+  renderLibs();
+  updateCurLibHeader();
+  renderQA();
+}
+function updateCurLibHeader() {
+  const lib = libs.find(l => l.id === selectedLibId);
+  if (lib) {
+    document.getElementById("curLibName").innerText = (lib.is_default===1?'⭐ ':'') + lib.name;
+    document.getElementById("curLibDesc").innerText = lib.description || "暂无描述";
+  } else {
+    document.getElementById("curLibName").innerText = "请选择题库";
+    document.getElementById("curLibDesc").innerText = "← 从左侧选择一个题库开始编辑";
+  }
+}
+function editCurrentLib() {
+  const lib = libs.find(l => l.id === selectedLibId);
+  if (!lib) { toast("请先在左侧选择一个题库", false); return; }
+  editLib(lib);
+}
+function showLibForm() {
+  document.getElementById("libModalTitle").innerText = "新建题库";
+  document.getElementById("libEditId").value = "";
+  document.getElementById("libF_name").value = "";
+  document.getElementById("libF_desc").value = "";
+  document.getElementById("libModal").classList.remove("hidden");
+}
+function editLib(l) {
+  document.getElementById("libModalTitle").innerText = "编辑题库";
+  document.getElementById("libEditId").value = l.id;
+  document.getElementById("libF_name").value = l.name;
+  document.getElementById("libF_desc").value = l.description || "";
+  document.getElementById("libModal").classList.remove("hidden");
+}
+function closeLibModal() { document.getElementById("libModal").classList.add("hidden"); }
+
+async function saveLib() {
+  const id = document.getElementById("libEditId").value;
+  const data = {
+    name: document.getElementById("libF_name").value.trim(),
+    description: document.getElementById("libF_desc").value.trim()
+  };
+  if (!data.name) { toast("请输入题库名称", false); return; }
+  let ok;
+  if (id) {
+    const r = await fetch(API + "/api/libraries/" + id, {method:"PUT", headers:{"Content-Type":"application/json"}, body: JSON.stringify(data)});
+    ok = r.ok;
+  } else {
+    const r = await fetch(API + "/api/libraries", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(data)});
+    ok = r.ok;
+  }
+  if (ok) { closeLibModal(); toast("✅ 已保存"); loadLibs(); }
+  else toast("❌ 保存失败", false);
+}
+async function deleteLib(id) {
+  if (!confirm("删除题库会同时删除里面的所有问答，确定吗？")) return;
+  const r = await fetch(API + "/api/libraries/" + id, {method:"DELETE"});
+  if (r.ok) {
+    toast("✅ 已删除");
+    if (selectedLibId === id) selectedLibId = null;
+    loadLibs(); loadQA();
+  }
+}
+
+// ========= 问答 =========
+async function loadQA() {
+  const r = await fetch(API + "/api/qa");
+  qaList = await r.json();
+  renderQA();
+}
+function populateQALibFilter() {
+  const sel = document.getElementById("qaLibFilter");
+  const current = sel.value;
+  sel.innerHTML = `<option value="">全部题库</option>` + libs.map(l => `<option value="${l.id}">${l.name}</option>`).join("");
+  sel.value = current;
+}
+function renderQA() {
+  if (!selectedLibId) { document.getElementById("qaList").innerHTML = ""; document.getElementById("qaCount").innerText = ""; return; }
+  const kw = (document.getElementById("qaSearch").value || "").toLowerCase();
+  let list = qaList.filter(q => q.library_id === selectedLibId);
+  if (kw) list = list.filter(q => (q.question + q.answer + (q.keywords||[]).join(" ")).toLowerCase().includes(kw));
+  document.getElementById("qaCount").innerText = `共 ${list.length} / ${qaList.filter(q => q.library_id===selectedLibId).length} 条`;
+  const el = document.getElementById("qaList");
+  el.innerHTML = list.map(q => {
+    const tags = (q.keywords || []).map(k => `<span class="badge badge-yellow mr-1">${escape(k)}</span>`).join("");
+    // 显示可用的翻译版本
+    const langs = [];
+    if (q.question_en) langs.push(`<span class="badge badge-gray lang-en">EN ✓</span>`);
+    if (q.question_yue) langs.push(`<span class="badge badge-gray lang-yue">粵 ✓</span>`);
+    return `
+      <div class="qa-item">
+        <div class="flex items-start justify-between gap-3">
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 flex-wrap mb-1">
+              ${langs.join("")}
+            </div>
+            <div class="font-semibold text-white">❓ ${escape(q.question)}</div>
+            <div class="text-slate-300 mt-1">💡 ${escape(q.answer)}</div>
+            <div class="mt-2">${tags}</div>
+          </div>
+          <div class="flex gap-2 shrink-0">
+            <button class="btn btn-ghost text-sm" onclick='editQA(${JSON.stringify(q)})'>✏️</button>
+            <button class="btn btn-danger text-sm" onclick="deleteQA(${q.id})">🗑️</button>
+          </div>
+        </div>
+      </div>`;
+  }).join("") || `<div class="text-center text-slate-500 py-10">暂无问答，点右上角新建</div>`;
+}
+
+function switchLangTab(tab) {
+  document.getElementById("tabZh").classList.toggle("active", tab==="zh");
+  document.getElementById("tabEn").classList.toggle("active", tab==="en");
+  document.getElementById("tabYue").classList.toggle("active", tab==="yue");
+  document.getElementById("langZh").classList.toggle("hidden", tab!=="zh");
+  document.getElementById("langEn").classList.toggle("hidden", tab!=="en");
+  document.getElementById("langYue").classList.toggle("hidden", tab!=="yue");
+}
+
+function showQAForm() {
+  document.getElementById("qaModalTitle").innerText = "新建问答";
+  document.getElementById("qaEditId").value = "";
+  document.getElementById("qaF_question").value = "";
+  document.getElementById("qaF_answer").value = "";
+  document.getElementById("qaF_question_en").value = "";
+  document.getElementById("qaF_answer_en").value = "";
+  document.getElementById("qaF_question_yue").value = "";
+  document.getElementById("qaF_answer_yue").value = "";
+  document.getElementById("qaF_keywords").value = "";
+  populateQALibSelect();
+  document.getElementById("qaModal").classList.remove("hidden");
+  switchLangTab("zh");
+}
+function editQA(q) {
+  document.getElementById("qaModalTitle").innerText = "编辑问答";
+  document.getElementById("qaEditId").value = q.id;
+  populateQALibSelect(q.library_id);
+  document.getElementById("qaF_question").value = q.question || "";
+  document.getElementById("qaF_answer").value = q.answer || "";
+  document.getElementById("qaF_question_en").value = q.question_en || "";
+  document.getElementById("qaF_answer_en").value = q.answer_en || "";
+  document.getElementById("qaF_question_yue").value = q.question_yue || "";
+  document.getElementById("qaF_answer_yue").value = q.answer_yue || "";
+  document.getElementById("qaF_keywords").value = (q.keywords || []).join(", ");
+  document.getElementById("qaModal").classList.remove("hidden");
+  switchLangTab("zh");
+}
+function populateQALibSelect(selected) {
+  const sel = document.getElementById("qaF_lib");
+  sel.innerHTML = libs.map(l => `<option value="${l.id}">${l.name}</option>`).join("");
+  if (selected) sel.value = selected;
+  else if (selectedLibId) sel.value = selectedLibId;
+  else if (libs.length > 0) sel.value = libs.find(l => l.is_default === 1)?.id || libs[0].id;
+}
+function closeQAModal() { document.getElementById("qaModal").classList.add("hidden"); }
+
+async function saveQA() {
+  const data = {
+    library_id: parseInt(document.getElementById("qaF_lib").value),
+    question: document.getElementById("qaF_question").value.trim(),
+    answer: document.getElementById("qaF_answer").value.trim(),
+    question_en: document.getElementById("qaF_question_en").value.trim(),
+    answer_en: document.getElementById("qaF_answer_en").value.trim(),
+    question_yue: document.getElementById("qaF_question_yue").value.trim(),
+    answer_yue: document.getElementById("qaF_answer_yue").value.trim(),
+    keywords: document.getElementById("qaF_keywords").value.split(/[,，]/).map(s => s.trim()).filter(Boolean),
+    media_refs: []
+  };
+  if (!data.question || !data.answer) { toast("中文问题和回答都不能为空", false); return; }
+  const id = document.getElementById("qaEditId").value;
+  let ok;
+  if (id) {
+    const r = await fetch(API + "/api/qa/" + id, {method:"PUT", headers:{"Content-Type":"application/json"}, body: JSON.stringify(data)});
+    ok = r.ok;
+  } else {
+    const r = await fetch(API + "/api/qa", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(data)});
+    ok = r.ok;
+  }
+  if (ok) { closeQAModal(); toast("✅ 已保存"); loadQA(); }
+  else toast("❌ 保存失败", false);
+}
+async function deleteQA(id) {
+  if (!confirm("确定删除这条问答吗？")) return;
+  const r = await fetch(API + "/api/qa/" + id, {method:"DELETE"});
+  if (r.ok) { toast("✅ 已删除"); loadQA(); }
+}
+
+// ========= 配置 =========
+async function loadConfig() {
+  const r = await fetch(API + "/api/config");
+  const c = await r.json();
+  document.getElementById("cfg_robot_name").value = c.robot_name || "小胖";
+  document.getElementById("cfg_language").value = c.language || "auto";
+  document.getElementById("cfg_greeting").value = c.greeting || "";
+  document.getElementById("cfg_auto_wake_words").value = c.auto_wake_words || "";
+  document.getElementById("cfg_person_detection").checked = (c.person_detection || "false") === "true";
+  document.getElementById("cfg_idle_timeout").value = c.idle_timeout || "5";
+  document.getElementById("cfg_use_ai").checked = (c.use_ai || "false") === "true";
+  document.getElementById("cfg_api_key").value = c.api_key || "";
+  document.getElementById("cfg_model_id").value = c.model_id || "";
+  document.getElementById("cfg_system_prompt").value = c.system_prompt || "";
+  const th = c.match_threshold || "60";
+  document.getElementById("cfg_match_threshold").value = th;
+  document.getElementById("thVal").innerText = th;
+}
+async function saveConfig() {
+  const data = {
+    robot_name: document.getElementById("cfg_robot_name").value,
+    language: document.getElementById("cfg_language").value,
+    greeting: document.getElementById("cfg_greeting").value,
+    auto_wake_words: document.getElementById("cfg_auto_wake_words").value,
+    person_detection: document.getElementById("cfg_person_detection").checked + "",
+    idle_timeout: document.getElementById("cfg_idle_timeout").value,
+    use_ai: document.getElementById("cfg_use_ai").checked + "",
+    api_key: document.getElementById("cfg_api_key").value,
+    model_id: document.getElementById("cfg_model_id").value,
+    system_prompt: document.getElementById("cfg_system_prompt").value,
+    match_threshold: document.getElementById("cfg_match_threshold").value,
+  };
+  const r = await fetch(API + "/api/config", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(data)});
+  if (r.ok) toast("✅ 已保存，机器人下次打开自动同步");
+  else toast("❌ 保存失败", false);
+}
+
+function syncNow() {
+  window.open(window.location.origin + "/api/sync");
+  toast("✅ 数据已导出，机器人打开APP自动同步");
+}
+
+// ========= 车辆管理 =========
+let vehicles = [], selectedVhId = null, editVh = null;
+async function loadVehicles() {
+  const r = await fetch(API + "/api/vehicles");
+  vehicles = await r.json();
+  document.getElementById("vhCount").textContent = "(" + vehicles.length + ")";
+  renderVhList();
+  if (selectedVhId) selectVehicle(selectedVhId);
+  else if (vehicles.length) selectVehicle(vehicles[0].id);
+  else showVhEmpty();
+}
+function renderVhList() {
+  const el = document.getElementById("vhList");
+  el.innerHTML = vehicles.map(v => `
+    <div class="lib-item cursor-pointer ${selectedVhId === v.id ? 'ring-2 ring-blue-400' : ''}" onclick="selectVehicle(${v.id})">
+      <div class="flex items-center gap-2">
+        ${v.thumbnail ? `<img src="${API}${v.thumbnail}" class="w-10 h-10 rounded object-cover">` : `<div class="w-10 h-10 rounded bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-lg">🚗</div>`}
+        <div class="flex-1 min-w-0">
+          <div class="text-sm text-white font-medium truncate">${escape(v.name)}</div>
+          <div class="text-xs text-slate-500">${escape(v.brand || '')} ${v.year || ''}</div>
+        </div>
+      </div>
+    </div>
+  `).join("") || '<div class="text-slate-500 text-center py-6">暂无车辆，点 ➕ 新车</div>';
+}
+function showVhEmpty() {
+  document.getElementById("vhEmpty").classList.remove("hidden");
+  document.getElementById("vhDetail").classList.add("hidden");
+}
+function selectVehicle(id) {
+  selectedVhId = id;
+  const v = vehicles.find(x => x.id === id);
+  if (!v) return;
+  renderVhList();
+  document.getElementById("vhEmpty").classList.add("hidden");
+  document.getElementById("vhDetail").classList.remove("hidden");
+  document.getElementById("vhName").textContent = v.name;
+  document.getElementById("vhBrand").textContent = v.brand || "—";
+  document.getElementById("vhYear").textContent = v.year || "—";
+  document.getElementById("vhCat").textContent = v.category || "—";
+  document.getElementById("vhDesc").textContent = v.description || "—";
+  document.getElementById("vhDescEn").textContent = v.description_en || "—";
+  document.getElementById("vhDescYue").textContent = v.description_yue || "—";
+  editVh = { ...v };
+  // 图片
+  document.getElementById("imgCount").textContent = `(${v.images?.length || 0})`;
+  const grid = document.getElementById("imgGrid");
+  const imgs = v.images || [];
+  if (!imgs.length) {
+    grid.innerHTML = '<div class="col-span-4 text-slate-500 text-center py-4 text-sm">还没有图片，上传几张吧~</div>';
+  } else {
+    grid.innerHTML = imgs.map(img => `
+      <div class="relative group">
+        <img src="${API}${img.stored_path}" class="w-full h-20 object-cover rounded cursor-pointer hover:ring-2 hover:ring-blue-400" onclick="window.open('${API}${img.stored_path}')">
+        <button onclick="deleteImg(${img.id})" class="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 text-xs opacity-0 group-hover:opacity-100 transition">✕</button>
+      </div>
+    `).join("");
+  }
+}
+async function uploadVhImg(input) {
+  if (!selectedVhId) { toast("请先选择车辆", false); return; }
+  const files = input.files;
+  if (!files.length) return;
+  const fd = new FormData();
+  for (let f of files) fd.append("file", f);
+  const r = await fetch(API + `/api/vehicles/${selectedVhId}/images`, { method: "POST", body: fd });
+  if (r.ok) { toast("✅ 图片已上传"); loadVehicles(); }
+  else toast("❌ 上传失败", false);
+  input.value = "";
+}
+async function deleteImg(imgId) {
+  if (!confirm("删除这张图片？")) return;
+  const r = await fetch(API + `/api/vehicle-images/${imgId}`, { method: "DELETE" });
+  if (r.ok) { toast("✅ 已删除"); loadVehicles(); }
+}
+function showVehicleForm(v) {
+  v = v || { name:"", brand:"", year:"", category:"", description:"", description_en:"", description_yue:"" };
+  const isNew = !v.id;
+  const mask = document.createElement("div");
+  mask.className = "modal-mask";
+  mask.innerHTML = `
+    <div class="modal" style="max-width:720px">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-bold text-white">${isNew ? "➕ 新建车辆" : "✏️ 编辑: " + v.name}</h2>
+        <button class="btn btn-ghost" onclick="this.closest('.modal-mask').remove()">✕</button>
+      </div>
+      <div class="grid md:grid-cols-3 gap-3 mb-3">
+        <div><label class="text-xs text-slate-500 block mb-1">车型名 *</label><input class="input" id="f_vh_name" value="${escape(v.name)}" placeholder="如：高尔夫"></div>
+        <div><label class="text-xs text-slate-500 block mb-1">品牌</label><input class="input" id="f_vh_brand" value="${escape(v.brand)}" placeholder="如：大众"></div>
+        <div><label class="text-xs text-slate-500 block mb-1">年份</label><input class="input" id="f_vh_year" value="${escape(v.year)}" placeholder="2024"></div>
+      </div>
+      <div class="grid md:grid-cols-3 gap-3 mb-3">
+        <div><label class="text-xs text-slate-500 block mb-1">类别</label>
+          <select class="input" id="f_vh_cat">
+            <option ${v.category==="轿车"?"selected":""}>轿车</option>
+            <option ${v.category==="SUV"?"selected":""}>SUV</option>
+            <option ${v.category==="新能源"?"selected":""}>新能源</option>
+            <option ${v.category==="跑车"?"selected":""}>跑车</option>
+            <option ${!v.category?"selected":""}>其他</option>
+          </select>
+        </div>
+        <div><label class="text-xs text-slate-500 block mb-1">排序</label><input class="input" id="f_vh_sort" type="number" value="${v.sort_order||0}"></div>
+        <div><label class="text-xs text-slate-500 block mb-1">封面图URL (可选)</label><input class="input" id="f_vh_thumb" value="${escape(v.thumbnail||'')}" placeholder="/uploads/xxx.jpg"></div>
+      </div>
+      <div class="mb-3"><label class="text-xs text-slate-500 block mb-1">🇨🇳 中文简介</label><textarea class="input" id="f_vh_desc" rows="3">${escape(v.description)}</textarea></div>
+      <div class="mb-3"><label class="text-xs text-slate-500 block mb-1">🇬🇧 English</label><textarea class="input" id="f_vh_desc_en" rows="2">${escape(v.description_en)}</textarea></div>
+      <div class="mb-3"><label class="text-xs text-slate-500 block mb-1">🇭🇰 粵語</label><textarea class="input" id="f_vh_desc_yue" rows="2">${escape(v.description_yue)}</textarea></div>
+      <div class="flex gap-3 mt-4">
+        <button class="btn btn-ghost flex-1" onclick="this.closest('.modal-mask').remove()">取消</button>
+        <button class="btn btn-primary flex-1" onclick="saveVh(${isNew?'null':v.id})">💾 保存</button>
+      </div>
+    </div>`;
+  document.body.appendChild(mask);
+}
+async function saveVh(id) {
+  const data = {
+    name: document.getElementById("f_vh_name").value.trim(),
+    brand: document.getElementById("f_vh_brand").value.trim(),
+    year: document.getElementById("f_vh_year").value.trim(),
+    category: document.getElementById("f_vh_cat").value,
+    sort_order: parseInt(document.getElementById("f_vh_sort").value) || 0,
+    thumbnail: document.getElementById("f_vh_thumb").value.trim(),
+    description: document.getElementById("f_vh_desc").value,
+    description_en: document.getElementById("f_vh_desc_en").value,
+    description_yue: document.getElementById("f_vh_desc_yue").value,
+  };
+  if (!data.name) { toast("车型名必填", false); return; }
+  const r = await fetch(API + (id ? `/api/vehicles/${id}` : "/api/vehicles"), {
+    method: id ? "PUT" : "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify(data)
+  });
+  if (r.ok) {
+    toast("✅ 已保存");
+    document.querySelector(".modal-mask")?.remove();
+    await loadVehicles();
+    if (!id) { const nb = await r.json(); selectedVhId = nb.id; selectVehicle(nb.id); }
+    else selectVehicle(id);
+  } else toast("❌ 保存失败", false);
+}
+async function deleteVehicle() {
+  if (!selectedVhId) return;
+  if (!confirm("确定删除该车辆及其所有图片？此操作不可撤销")) return;
+  const r = await fetch(API + `/api/vehicles/${selectedVhId}`, { method: "DELETE" });
+  if (r.ok) { toast("✅ 已删除"); selectedVhId = null; await loadVehicles(); }
+  else toast("❌ 删除失败", false);
+}
+
+function escape(s) {
+  if (!s) return "";
+  const d = document.createElement("div");
+  d.textContent = s;
+  return d.innerHTML;
+}
+function toast(msg, ok = true) {
+  const t = document.createElement("div");
+  t.className = "toast " + (ok ? "toast-ok" : "toast-err");
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2500);
+}
+
+init();
+</script>

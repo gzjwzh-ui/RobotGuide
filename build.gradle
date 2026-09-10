@@ -1,0 +1,21 @@
+// Top-level build file
+buildscript {
+    ext.kotlin_version = "1.9.10"
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath "com.android.tools.build:gradle:8.1.0"
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+// Make kotlin_version available to subprojects
+ext {
+    kotlin_version = "1.9.10"
+}
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}

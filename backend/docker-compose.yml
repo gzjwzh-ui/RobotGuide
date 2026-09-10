@@ -1,0 +1,11 @@
+services:
+  robot-guide:
+    build: .
+    container_name: robot-guide
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - TZ=Asia/Shanghai
