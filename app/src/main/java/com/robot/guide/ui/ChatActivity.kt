@@ -112,7 +112,7 @@ class ChatActivity : AppCompatActivity() {
                     role = ChatMessage.Role.BOT, content = answer,
                     source = source, mediaRefs = mediaRefs
                 )
-                adapter.updateLastMessage(answer)
+                adapter.updateLastMessageWithSource(answer, "", mediaRefs)
                 scrollToBottom()
                 tts.speak(answer)
 
