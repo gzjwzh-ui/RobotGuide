@@ -4,6 +4,8 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -14,6 +16,7 @@ import com.robot.guide.R
 import com.robot.guide.api.RobotActionController
 import com.robot.guide.api.RobotAIService
 import com.robot.guide.data.ChatMessage
+import com.robot.guide.data.RobotStatus
 import com.robot.guide.databinding.ActivityMainBinding
 import com.robot.guide.util.AppSettings
 import com.robot.guide.util.BackendSync
@@ -23,7 +26,7 @@ import com.robot.guide.util.RobotTTS
 
 /**
  * 主界面 - 三栏横屏布局
- * 功能：摄像头实时预览 + 人脸检测 + 自动欢迎语 + 语音输入 + 机器动作
+ * 功能：摄像头实时预览 + 人脸检测 + 自动欢迎语 + 语音输入 + 机器动作 + 硬件状态
  */
 class MainActivity : AppCompatActivity() {
 
@@ -36,6 +39,20 @@ class MainActivity : AppCompatActivity() {
     private lateinit var speechRecognizer: RobotSpeechRecognizer
     private lateinit var chatAdapter: ChatAdapter
     private var tts: RobotTTS? = null
+
+    // 状态轮询
+    private val handler = Handler(Looper.getMainLooper())
+    private var statusPollRunning = false
+    private val statusPollIntervalMs = 2000L
+    private val statusPoll = object : Runnable {
+        override fun run() {
+            if (!statusPollRunning) return
+            actionController.fetchStatus { status ->
+                runOnUiThread { updateHardwareStatusUI(status) }
+            }
+            handler.postDelayed(this, statusPollIntervalMs)
+        }
+    }
 
     private val requestPerms = listOf(
         Manifest.permission.CAMERA,
@@ -89,6 +106,9 @@ class MainActivity : AppCompatActivity() {
         binding.rvChat.scrollToPosition(chatAdapter.itemCount - 1)
         binding.etInput.setText("")
 
+        // 🔥 用户提问里如果含硬件关键词，**不等 AI 回答就先触发**（快速响应）
+        actionController.autoTriggerFromText(question)
+
         val placeholdIdx = chatAdapter.itemCount
         chatAdapter.addMessage(ChatMessage(role = ChatMessage.Role.BOT, content = ""))
         binding.rvChat.scrollToPosition(placeholdIdx)
@@ -103,7 +123,7 @@ class MainActivity : AppCompatActivity() {
                 chatAdapter.updateLastMessageWithSource(answer, sourceText, mediaRefs)
                 binding.rvChat.scrollToPosition(chatAdapter.itemCount - 1)
                 tts?.speak(answer)
-                // 自动触发匹配的机器动作
+                // AI 回答里如果又提到硬件词，也触发一次（比如"我可以帮你前进..."）
                 actionController.autoTriggerFromText(answer)
             }
         }
@@ -232,18 +252,92 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ========== 机器动作按钮（调试用） ==========
+    // ========== 机器快捷动作 + 硬件状态 ==========
+
+    private var quickActionCursor = 0
+    private val quickActions = listOf(
+        RobotActionController.Action.COMBO_STRETCH,     // 活动筋骨（打招呼）
+        RobotActionController.Action.HEAD_RESET_ALL,   // 头部手臂复位
+        RobotActionController.Action.EAR_LED_ON,        // 耳朵灯开
+        RobotActionController.Action.EYE_LED_ON,        // 眼睛灯开
+        RobotActionController.Action.HEAD_LEFT,         // 头部左
+        RobotActionController.Action.HEAD_RIGHT,        // 头部右
+        RobotActionController.Action.HEAD_UP,            // 头部上
+        RobotActionController.Action.HEAD_DOWN,          // 头部下
+        RobotActionController.Action.BASE_TURN_LEFT_90, // 左转90°
+        RobotActionController.Action.BASE_STOP,         // 底座停止
+    )
 
     private fun setupActionButtons() {
-        // 从左栏的"头部"状态点击触发动作
-        binding.tvHeadStatus.setOnClickListener {
-            // 随机触发一个动作演示
-            val actions = RobotActionController.Action.values()
-            val action = actions.random()
-            actionController.execute(action) { success, msg ->
-                Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
-            }
+        // 点击"头部"状态卡片 → 依次触发快捷动作（方便演示/调机）
+        binding.tvHeadStatus.setOnClickListener { triggerNextQuickAction() }
+    }
+
+    private fun triggerNextQuickAction() {
+        val action = quickActions[quickActionCursor % quickActions.size]
+        quickActionCursor++
+        actionController.execute(action) { ok, msg ->
+            Toast.makeText(this@MainActivity, msg, Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun startStatusPoll() {
+        if (statusPollRunning) return
+        statusPollRunning = true
+        handler.post(statusPoll)
+    }
+    private fun stopStatusPoll() {
+        statusPollRunning = false
+        handler.removeCallbacks(statusPoll)
+    }
+
+    /** 把后端 /api/robot/status 快照映射到左栏状态行 */
+    private fun updateHardwareStatusUI(status: RobotStatus?) {
+        if (status == null) {
+            binding.tvBackendStatus.text = "● 离线"
+            binding.tvBackendStatus.setTextColor(resources.getColor(R.color.error, theme))
+            return
+        }
+        // 后端连接 + 硬件连接状态
+        binding.tvBackendStatus.text = "● 在线" + if (status.hardwareConnected) " · 硬件已连" else ""
+        binding.tvBackendStatus.setTextColor(resources.getColor(R.color.success, theme))
+
+        // 头部状态
+        binding.tvHeadStatus.text = when (status.head.status) {
+            "moving"    -> "移动中 · ${status.head.angle}°"
+            "resetting" -> "复位中"
+            else        -> "${status.head.angle}° · 正常"
+        }
+
+        // 把最有意义的传感器汇总显示在 tvVoiceStatus 上（超声波最近距离）
+        val us = status.sensors.ultrasonic
+        val nearest = minOf(us.front, us.midCenter, us.leftCenter, us.rightCenter)
+        val nearestLabel = when (nearest) {
+            in 200..255 -> "安全"
+            in 100..199 -> "注意"
+            in 30..99   -> "接近！"
+            else        -> "过近 ⚠"
+        }
+        binding.tvVoiceStatus.text = "前方 ${nearest} · $nearestLabel"
+        binding.tvVoiceStatus.setTextColor(resources.getColor(
+            if (nearest < 100) R.color.error
+            else if (nearest < 200) R.color.colorPrimary
+            else R.color.success, theme))
+
+        // 灯光状态拼在检测详情行
+        val earOn = if (status.led.ear) "👂ON" else "👂OFF"
+        val eyeOn = if (status.led.eye) "👁ON" else "👁OFF"
+        binding.tvDetectDetail.text = "● 耳朵灯: $earOn   眼睛灯: $eyeOn"
+
+        // 顶部标题里反映底座状态 + 硬件连接
+        val baseLabel = when {
+            status.base.moving -> "移动中(${status.base.direction})"
+            else                -> "待机"
+        }
+        val hwTag = if (status.hardwareConnected) "ONLINE · HW" else "ONLINE · 模拟"
+        binding.tvRobotStatus.text = "$hwTag · $baseLabel"
+        binding.tvRobotStatus.setTextColor(resources.getColor(
+            if (status.hardwareConnected) R.color.success else R.color.colorPrimary, theme))
     }
 
     // ========== 权限 & 初始化 ==========
@@ -269,6 +363,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initFeatures() {
+        // 0. 启动硬件状态轮询（每 2 秒一次）
+        startStatusPoll()
+
         // 1. 后端同步
         if (settings.syncEnabled) {
             backendSync.syncAll { ok, msg, _ ->
@@ -305,9 +402,9 @@ class MainActivity : AppCompatActivity() {
                             }
                             tts?.speak(greeting)
 
-                            // 打招呼动作
-                            actionController.execute(RobotActionController.Action.WAVE)
-                            actionController.execute(RobotActionController.Action.GREET)
+                            // 打招呼动作：活动筋骨 + 头部手臂复位
+                            actionController.execute(RobotActionController.Action.COMBO_STRETCH)
+                            actionController.execute(RobotActionController.Action.HEAD_RESET_ALL)
 
                             // 对话区显示欢迎
                             chatAdapter.addMessage(ChatMessage(
@@ -351,12 +448,14 @@ class MainActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
+        stopStatusPoll()
         try { personDetector.stop() } catch (_: Exception) {}
         speechRecognizer.destroy()
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        stopStatusPoll()
         try { personDetector.stop() } catch (_: Exception) {}
         speechRecognizer.destroy()
         tts?.shutdown()

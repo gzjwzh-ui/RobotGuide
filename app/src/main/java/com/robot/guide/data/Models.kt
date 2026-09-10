@@ -74,3 +74,46 @@ data class VehicleImage(
     val caption: String = "",  // 图片说明
     val sortOrder: Int = 0
 )
+
+/**
+ * 机器动作信息（从后端 /api/robot/actions 返回）
+ */
+data class RobotActionInfo(
+    val code: String,          // 动作码，如 "base_forward_1m"
+    val group: String,         // 分组：底座移动 / 头部 / 灯光 / 组合动作
+    val name: String,          // 中文名，如 "前进1米"
+    val durationMs: Int,       // 预估执行时长
+    val hardware: String       // 目标硬件：base / head / led / combo
+)
+
+/**
+ * 机器硬件状态（从后端 /api/robot/status 返回）
+ */
+data class RobotStatus(
+    val head: HeadState = HeadState(),
+    val base: BaseState = BaseState(),
+    val led: LedState = LedState(),
+    val sensors: SensorState = SensorState(),
+    val lastAction: String? = null,
+    val lastActionAt: Long = 0,
+    val hardwareConnected: Boolean = false
+) {
+    data class HeadState(val angle: Int = 0, val status: String = "idle")
+    data class BaseState(val moving: Boolean = false, val direction: String = "idle")
+    data class LedState(val ear: Boolean = true, val eye: Boolean = true)
+    data class SensorState(
+        val infrared: Infrared = Infrared(),
+        val ultrasonic: Ultrasonic = Ultrasonic(),
+        val laser: String = "ok",
+        val humanDetected: Boolean = false,
+        val position: Position = Position()
+    ) {
+        data class Infrared(val right: Int = 0, val left: Int = 0, val fcc: Int = 0, val top: Int = 0)
+        data class Ultrasonic(
+            val rear: Int = 255, val front: Int = 255,
+            val leftCenter: Int = 255, val midLeft: Int = 255, val midCenter: Int = 255,
+            val rightCenter: Int = 255, val rightSide: Int = 255
+        )
+        data class Position(val x: Int = 0, val y: Int = 0, val theta: Int = 0)
+    }
+}

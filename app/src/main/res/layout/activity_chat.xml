@@ -10,7 +10,7 @@
     <LinearLayout
         android:id="@+id/topBar"
         android:layout_width="0dp"
-        android:layout_height="56dp"
+        android:layout_height="64dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:paddingStart="16dp"
@@ -20,19 +20,16 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <com.google.android.material.button.MaterialButton
+        <!-- 返回按钮（emoji ↩ 替代系统图标） -->
+        <TextView
             android:id="@+id/btnBack"
-            style="@style/ButtonIcon"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            app:icon="@android:drawable/ic_menu_revert"
-            app:iconSize="24dp"
-            app:iconTint="@color/text_primary"
-            android:contentDescription="@string/back"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            android:insetLeft="0dp"
-            android:insetRight="0dp" />
+            android:gravity="center"
+            android:text="↩"
+            android:textColor="@color/text_primary"
+            android:textSize="26sp"
+            android:contentDescription="@string/back" />
 
         <TextView
             android:id="@+id/tvTitle"
@@ -42,23 +39,18 @@
             android:gravity="center"
             android:text="@string/app_name"
             android:textColor="@color/text_primary"
-            android:textSize="20sp"
+            android:textSize="22sp"
             android:textStyle="bold" />
 
-        <!-- 媒体展示按钮（对话中触发媒体） -->
-        <com.google.android.material.button.MaterialButton
+        <!-- 媒体展示按钮（emoji 🖼️ 替代系统图标） -->
+        <TextView
             android:id="@+id/btnMediaGallery"
-            style="@style/ButtonIcon"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            app:icon="@android:drawable/ic_menu_gallery"
-            app:iconSize="24dp"
-            app:iconTint="@color/text_primary"
-            android:contentDescription="@string/media_title"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            android:insetLeft="0dp"
-            android:insetRight="0dp" />
+            android:gravity="center"
+            android:text="🖼️"
+            android:textSize="28sp"
+            android:contentDescription="@string/media_title" />
 
     </LinearLayout>
 
@@ -93,22 +85,19 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <!-- 语音按钮 -->
-        <com.google.android.material.button.MaterialButton
+        <!-- 语音按钮（emoji 🎤） -->
+        <TextView
             android:id="@+id/btnVoice"
-            style="@style/ButtonIcon"
             android:layout_width="56dp"
             android:layout_height="56dp"
-            app:icon="@android:drawable/ic_btn_speak_now"
-            app:iconSize="28dp"
-            app:iconTint="@color/text_primary"
-            android:backgroundTint="@color/colorPrimary"
+            android:background="@color/colorPrimary"
+            app:cornerRadius="28dp"
+            android:gravity="center"
+            android:text="🎤"
+            android:textSize="28sp"
+            android:elevation="2dp"
             android:contentDescription="语音输入"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            android:insetLeft="0dp"
-            android:insetRight="0dp"
-            app:cornerRadius="28dp" />
+            xmlns:app="http://schemas.android.com/apk/res-auto" />
 
         <!-- 输入框 -->
         <EditText
@@ -123,30 +112,28 @@
             android:hint="@string/chat_hint"
             android:textColor="@color/text_primary"
             android:textColorHint="@color/text_hint"
-            android:padding="14dp"
+            android:padding="16dp"
             android:paddingStart="20dp"
             android:paddingEnd="20dp"
             android:inputType="textMultiLine"
             android:imeOptions="actionSend"
             android:maxLines="4"
-            android:textSize="16sp" />
+            android:textSize="18sp" />
 
-        <!-- 发送按钮 -->
-        <com.google.android.material.button.MaterialButton
+        <!-- 发送按钮（emoji ➤） -->
+        <TextView
             android:id="@+id/btnSend"
-            style="@style/ButtonIcon"
             android:layout_width="56dp"
             android:layout_height="56dp"
-            app:icon="@android:drawable/ic_menu_send"
-            app:iconSize="24dp"
-            app:iconTint="@color/text_primary"
-            android:backgroundTint="@color/colorPrimary"
-            android:contentDescription="@string/chat_send"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            android:insetLeft="0dp"
-            android:insetRight="0dp"
-            app:cornerRadius="28dp" />
+            android:background="@color/colorPrimary"
+            android:gravity="center"
+            android:text="➤"
+            android:textColor="#FFFFFF"
+            android:textSize="28sp"
+            android:elevation="2dp"
+            xmlns:app="http://schemas.android.com/apk/res-auto"
+            app:cornerRadius="28dp"
+            android:contentDescription="@string/chat_send" />
 
     </LinearLayout>
 

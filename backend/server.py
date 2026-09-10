@@ -1,9 +1,9 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
-展厅机器人后台 v3.0
-新增: 车辆管理 CRUD + 图片上传
+展厅机器人后台 v3.1
+新增: 车辆管理 CRUD + 图片上传 + 机器动作/状态 API
 """
-import os, json, sqlite3, time, asyncio, tempfile, uuid, mimetypes, re
+import os, json, sqlite3, time, asyncio, tempfile, uuid, mimetypes, re, threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 
@@ -155,6 +155,94 @@ def row_to_dict(row):
             try: d[k] = json.loads(d[k])
             except: d[k] = []
     return d
+
+
+# ===== 机器人动作注册表（对齐实体机器控制面板） =====
+ROBOT_ACTIONS = [
+    # 底座移动
+    {"code":"base_turn_left_90", "group":"底座移动", "name":"左转90°", "duration_ms":2500, "hardware":"base"},
+    {"code":"base_turn_right_90","group":"底座移动", "name":"右转90°", "duration_ms":2500, "hardware":"base"},
+    {"code":"base_forward_1m",    "group":"底座移动", "name":"前进1米", "duration_ms":3500, "hardware":"base"},
+    {"code":"base_backward_1m",   "group":"底座移动", "name":"后退1米", "duration_ms":3500, "hardware":"base"},
+    {"code":"base_stop",          "group":"底座移动", "name":"底座停止", "duration_ms":500,  "hardware":"base"},
+    # 头部 / 手臂
+    {"code":"head_left",          "group":"头部",    "name":"头部左",   "duration_ms":800,  "hardware":"head"},
+    {"code":"head_right",         "group":"头部",    "name":"头部右",   "duration_ms":800,  "hardware":"head"},
+    {"code":"head_up",            "group":"头部",    "name":"头部上",   "duration_ms":800,  "hardware":"head"},
+    {"code":"head_down",          "group":"头部",    "name":"头部下",   "duration_ms":800,  "hardware":"head"},
+    {"code":"head_reset_all",     "group":"头部",    "name":"头部手臂复位","duration_ms":1200,"hardware":"head"},
+    {"code":"head_reset",         "group":"头部",    "name":"头部复位", "duration_ms":1000, "hardware":"head"},
+    # 灯光
+    {"code":"ear_led_on",         "group":"灯光",    "name":"耳朵灯开", "duration_ms":300,  "hardware":"led"},
+    {"code":"ear_led_off",        "group":"灯光",    "name":"耳朵灯关", "duration_ms":300,  "hardware":"led"},
+    {"code":"eye_led_on",         "group":"灯光",    "name":"眼睛灯开", "duration_ms":300,  "hardware":"led"},
+    {"code":"eye_led_off",        "group":"灯光",    "name":"眼睛灯关", "duration_ms":300,  "hardware":"led"},
+    # 组合动作
+    {"code":"combo_stretch",      "group":"组合动作","name":"活动筋骨", "duration_ms":5000, "hardware":"combo"},
+]
+ACTION_MAP = {a["code"]: a for a in ROBOT_ACTIONS}
+
+# 内部状态（模拟硬件反馈，未来接真实串口/网络时替换 setter）
+robot_state_lock = threading.Lock()
+ROBOT_STATE = {
+    "head":        {"angle":0, "status":"idle"},   # angle: -30~30 deg, status: idle/moving/resetting
+    "base":        {"moving":False, "direction":"idle"},
+    "led":         {"ear":True, "eye":True},        # 默认都亮
+    "sensors": {
+        "infrared": {
+            "right": 0,
+            "left":  0,
+            "fcc":   0,
+            "top":   0,
+        },
+        "ultrasonic": {
+            "rear":  255,
+            "front": 255,
+            "left_center":  255,
+            "mid_left":     255,
+            "mid_center":   255,
+            "right_center": 255,
+            "right_side":   255,
+        },
+        "laser":   "ok",
+        "human_detected": False,
+        "position": {"x":0, "y":0, "theta":0},
+    },
+    "last_action": None,
+    "last_action_at": 0,
+    "hardware_connected": False,  # True = 已连真实硬件
+}
+
+
+def _apply_action_state(action_code: str):
+    """根据动作码更新内部状态（模拟执行效果）"""
+    with robot_state_lock:
+        s = ROBOT_STATE
+        now = int(time.time() * 1000)
+        s["last_action"] = action_code
+        s["last_action_at"] = now
+        act = ACTION_MAP.get(action_code)
+        if not act:
+            return
+        hw = act["hardware"]
+        if hw == "base":
+            s["base"]["moving"] = action_code != "base_stop"
+            dir_map = {
+                "base_forward_1m":"forward", "base_backward_1m":"backward",
+                "base_turn_left_90":"turn_left", "base_turn_right_90":"turn_right",
+                "base_stop":"idle",
+            }
+            s["base"]["direction"] = dir_map.get(action_code, "idle")
+        elif hw == "head":
+            s["head"]["status"] = "moving" if "reset" not in action_code else "resetting"
+        elif hw == "led":
+            if action_code == "ear_led_on":  s["led"]["ear"] = True
+            if action_code == "ear_led_off": s["led"]["ear"] = False
+            if action_code == "eye_led_on":  s["led"]["eye"] = True
+            if action_code == "eye_led_off": s["led"]["eye"] = False
+        elif hw == "combo":
+            s["base"]["moving"] = True
+            s["head"]["status"] = "moving"
 
 # ===== HTTP =====
 class Handler(BaseHTTPRequestHandler):
@@ -308,6 +396,25 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/voices":
             self.send_json({"available": HAS_EDGE_TTS, "voices": VOICE_LIBRARY}); return
 
+        # === 机器人：列出所有支持的动作 ===
+        if path == "/api/robot/actions":
+            self.send_json({
+                "version": 1,
+                "hardware_connected": ROBOT_STATE["hardware_connected"],
+                "actions": ROBOT_ACTIONS,
+                "groups": sorted({a["group"] for a in ROBOT_ACTIONS}),
+            }); return
+
+        # === 机器人：查询当前状态（硬件反馈） ===
+        if path == "/api/robot/status":
+            with robot_state_lock:
+                snapshot = json.loads(json.dumps(ROBOT_STATE))  # 深拷贝
+            # 如果没真实硬件，模拟轻微传感器抖动让 UI 有动态感
+            import random as _r
+            snapshot["sensors"]["ultrasonic"]["front"]  = max(0, min(255, 255 - int(_r.uniform(0, 6))))
+            snapshot["sensors"]["ultrasonic"]["mid_center"] = max(0, min(255, 255 - int(_r.uniform(0, 6))))
+            self.send_json(snapshot); return
+
         self.send_json({"error":"not found"}, 404)
 
     # ===== POST =====
@@ -454,6 +561,32 @@ class Handler(BaseHTTPRequestHandler):
             except Exception as e:
                 self.send_json({"error": str(e)}, 500)
             return
+
+        # === 机器人：执行动作 ===
+        if path == "/api/robot/action":
+            code = (data.get("action") or "").strip()
+            duration = int(data.get("duration") or (ACTION_MAP.get(code) or {}).get("duration_ms", 0))
+            if not code: self.send_json({"error":"action required"}, 400); return
+            act = ACTION_MAP.get(code)
+            if not act:
+                self.send_json({
+                    "ok": False,
+                    "error": "unknown action",
+                    "available_codes": list(ACTION_MAP.keys()),
+                }, 400); return
+            _apply_action_state(code)
+            # TODO: 真实硬件接入点 —— 在此处通过串口/网络发送指令给实体机器
+            # serial_port.write(ACTION_TO_HW_CMD[code])
+            self.send_json({
+                "ok": True,
+                "action": code,
+                "name": act["name"],
+                "group": act["group"],
+                "duration_ms": duration,
+                "hardware_connected": ROBOT_STATE["hardware_connected"],
+                "hint": "动作指令已接收（本地模拟），接入真实硬件后此处会发送到机器。",
+                "ack_at": int(time.time() * 1000),
+            }); return
 
         self.send_json({"error":"not found"}, 404)
 

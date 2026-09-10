@@ -16,19 +16,14 @@
         android:paddingEnd="16dp"
         android:background="@color/bg_card">
 
-        <com.google.android.material.button.MaterialButton
+        <TextView
             android:id="@+id/btnCancel"
-            style="@style/ButtonIcon"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            app:icon="@android:drawable/ic_menu_close_clear_cancel"
-            app:iconSize="24dp"
-            app:iconTint="@color/text_primary"
-            android:contentDescription="@string/qa_cancel"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            android:insetLeft="0dp"
-            android:insetRight="0dp" />
+            android:gravity="center"
+            android:text="❌"
+            android:textSize="22sp"
+            android:contentDescription="@string/qa_cancel" />
 
         <TextView
             android:id="@+id/tvTitle"
@@ -41,19 +36,14 @@
             android:textSize="20sp"
             android:textStyle="bold" />
 
-        <com.google.android.material.button.MaterialButton
+        <TextView
             android:id="@+id/btnSave"
-            style="@style/ButtonIcon"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            app:icon="@android:drawable/ic_menu_save"
-            app:iconSize="24dp"
-            app:iconTint="@color/colorPrimary"
-            android:contentDescription="@string/save"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            android:insetLeft="0dp"
-            android:insetRight="0dp" />
+            android:gravity="center"
+            android:text="💾"
+            android:textSize="24sp"
+            android:contentDescription="@string/save" />
 
     </LinearLayout>
 

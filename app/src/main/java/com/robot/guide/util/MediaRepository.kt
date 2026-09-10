@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import com.robot.guide.data.MediaFile
 import com.robot.guide.data.Vehicle
+import com.robot.guide.data.VehicleImage
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.BufferedReader
@@ -13,64 +14,75 @@ import java.net.URL
 
 /**
  * 媒体资源仓库
- * 从后端 API 加载车辆图片和视频
+ *
+ * 修复点：
+ *   1. thumbnail/stored_path 是相对路径（/uploads/xxx.jpg），客户端自动拼 baseUrl
+ *   2. mock 图片换成 picsum.photos（稳定 CDN，国内可访）
+ *   3. mock 视频换成 Google Sample（已知可用的公开 CDN）
  */
 class MediaRepository(context: Context) {
 
     private val tag = "MediaRepo"
     private val settings = AppSettings(context)
 
-    /**
-     * 加载车辆列表
-     */
+    private fun baseUrl(): String = settings.backendUrl.trimEnd('/')
+
+    /** 把后端返回的相对路径（如 /uploads/xxx.jpg）补成完整 URL */
+    private fun absolutePath(path: String): String {
+        if (path.isBlank()) return ""
+        // 已经是完整 URL 的直接返回
+        if (path.startsWith("http://") || path.startsWith("https://")) return path
+        val base = baseUrl()
+        return if (base.isBlank()) path else "$base$path"
+    }
+
+    /** 拼图片 URL —— mock 时 picsum 的参数化图片 */
+    private fun mockImage(seed: Int, w: Int = 800, h: Int = 600): String =
+        "https://picsum.photos/seed/robot$seed/$w/$h"
+
     fun loadVehicles(onResult: (List<Vehicle>) -> Unit) {
-        val baseUrl = settings.backendUrl.trimEnd('/')
-        if (baseUrl.isBlank()) {
-            // 返回内置测试数据
+        val base = baseUrl()
+        if (base.isBlank()) {
             onResult(getMockVehicles())
             return
         }
 
         Thread {
             try {
-                val url = URL("$baseUrl/api/vehicles")
-                val conn = url.openConnection() as HttpURLConnection
-                conn.connectTimeout = 3000
-                conn.readTimeout = 5000
-
-                if (conn.responseCode == 200) {
-                    val reader = BufferedReader(InputStreamReader(conn.inputStream))
-                    val body = reader.readText()
-                    reader.close()
-                    val arr = JSONArray(body)
-                    val vehicles = mutableListOf<Vehicle>()
-                    for (i in 0 until arr.length()) {
-                        vehicles.add(parseVehicle(arr.getJSONObject(i)))
-                    }
-                    onResult(vehicles)
-                } else {
-                    onResult(getMockVehicles())
+                val conn = (URL("$base/api/vehicles") as HttpURLConnection).apply {
+                    connectTimeout = 3000; readTimeout = 5000
                 }
+                if (conn.responseCode != 200) {
+                    onResult(getMockVehicles()); return@Thread
+                }
+                val body = BufferedReader(InputStreamReader(conn.inputStream)).readText()
                 conn.disconnect()
+                val arr = JSONArray(body)
+                val vehicles = (0 until arr.length()).map { i -> parseVehicle(arr.getJSONObject(i)) }
+                onResult(vehicles)
             } catch (e: Exception) {
-                Log.w(tag, "加载车辆列表失败，使用模拟数据: ${e.message}")
+                Log.w(tag, "加载车辆列表失败: ${e.message}，使用模拟数据")
                 onResult(getMockVehicles())
             }
         }.start()
     }
 
     private fun parseVehicle(obj: JSONObject): Vehicle {
-        val images = obj.optJSONArray("images")
-        val imgList = mutableListOf<com.robot.guide.data.VehicleImage>()
-        if (images != null) {
-            for (i in 0 until images.length()) {
-                val io = images.getJSONObject(i)
-                imgList.add(com.robot.guide.data.VehicleImage(
-                    url = io.optString("url"),
-                    caption = io.optString("caption", "")
-                ))
-            }
+        val imagesArr = obj.optJSONArray("images") ?: JSONArray()
+        val images = mutableListOf<VehicleImage>()
+        for (i in 0 until imagesArr.length()) {
+            val io = imagesArr.getJSONObject(i)
+            // stored_path 是后端字段（/uploads/xxx.jpg），客户端要拼 baseUrl
+            val rawPath = io.optString("stored_path")
+            val url = if (rawPath.isNotBlank()) absolutePath(rawPath) else io.optString("url")
+            images.add(VehicleImage(
+                url = url,
+                caption = io.optString("caption", ""),
+                sortOrder = io.optInt("sort_order")
+            ))
         }
+        val rawThumb = obj.optString("thumbnail")
+        val thumbnail = if (rawThumb.isNotBlank()) absolutePath(rawThumb) else null
         return Vehicle(
             id = obj.optLong("id"),
             name = obj.optString("name"),
@@ -78,110 +90,91 @@ class MediaRepository(context: Context) {
             year = obj.optString("year"),
             category = obj.optString("category"),
             description = obj.optString("description"),
-            thumbnail = obj.optString("thumbnail"),
-            images = imgList
+            descriptionEn = obj.optString("description_en"),
+            descriptionYue = obj.optString("description_yue"),
+            thumbnail = thumbnail,
+            imageCount = obj.optInt("image_count", images.size),
+            images = images
         )
     }
 
     /**
-     * 获取模拟车辆数据（内置图片URL用于测试）
+     * 模拟车辆数据 —— 5 辆，picsum.photos 稳定 CDN，展厅主题
+     * seed 带 robot 前缀避免 picsum 返回随机不相干图
      */
-    private fun getMockVehicles(): List<Vehicle> {
-        return listOf(
-            Vehicle(
-                id = 1,
-                name = "GT Concept",
-                brand = "健驰",
-                year = "2025",
-                category = "概念车",
-                description = "全新一代概念跑车，搭载双电机全轮驱动系统，零百加速仅2.3秒。",
-                thumbnail = "https://images.unsplash.com/photo-1617531653332-bd46c24f2068?w=600",
-                images = listOf(
-                    com.robot.guide.data.VehicleImage("https://images.unsplash.com/photo-1617531653332-bd46c24f2068?w=800", "前脸"),
-                    com.robot.guide.data.VehicleImage("https://images.unsplash.com/photo-1617788138017-80ad40651399?w=800", "侧面"),
-                    com.robot.guide.data.VehicleImage("https://images.unsplash.com/photo-1619362088658-a6c25ad6cb3d?w=800", "内饰")
-                )
-            ),
-            Vehicle(
-                id = 2,
-                name = "SUV Pro",
-                brand = "健驰",
-                year = "2024",
-                category = "SUV",
-                description = "智能豪华SUV，具备L3自动驾驶能力，续航里程达700公里。",
-                thumbnail = "https://images.unsplash.com/photo-1519440515328-c46c8257b28e?w=600",
-                images = listOf(
-                    com.robot.guide.data.VehicleImage("https://images.unsplash.com/photo-1519440515328-c46c8257b28e?w=800", "整车"),
-                    com.robot.guide.data.VehicleImage("https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800", "内饰")
-                )
-            ),
-            Vehicle(
-                id = 3,
-                name = "City EV",
-                brand = "健驰",
-                year = "2025",
-                category = "微型车",
-                description = "城市通勤电动车，小巧灵活，配备智能泊车和远程控制功能。",
-                thumbnail = "https://images.unsplash.com/photo-1593941707882-a5bac8eb9775?w=600",
-                images = listOf(
-                    com.robot.guide.data.VehicleImage("https://images.unsplash.com/photo-1593941707882-a5bac8eb9775?w=800", "外观"),
-                    com.robot.guide.data.VehicleImage("https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=800", "驾驶舱")
-                )
-            ),
-            Vehicle(
-                id = 4,
-                name = "Truck X",
-                brand = "健驰",
-                year = "2024",
-                category = "商用车",
-                description = "智能物流运输车，支持编队行驶，搭载多传感器融合系统。",
-                thumbnail = "https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=600",
-                images = listOf(
-                    com.robot.guide.data.VehicleImage("https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=800", "车头"),
-                    com.robot.guide.data.VehicleImage("https://images.unsplash.com/photo-1519003722824-194d4455a60c?w=800", "货箱")
-                )
-            ),
-            Vehicle(
-                id = 5,
-                name = "Roadster",
-                brand = "健驰",
-                year = "2025",
-                category = "跑车",
-                description = "纯电敞篷跑车，碳纤维车身，百公里加速2.1秒。",
-                thumbnail = "https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=600",
-                images = listOf(
-                    com.robot.guide.data.VehicleImage("https://images.unsplash.com/photo-1544636331-e26879cd4d9b?w=800", "外观"),
-                    com.robot.guide.data.VehicleImage("https://images.unsplash.com/photo-1583121274602-3e2820c69888?w=800", "内饰")
-                )
+    private fun getMockVehicles(): List<Vehicle> = listOf(
+        Vehicle(
+            id = 1, name = "高尔夫 GTI", brand = "大众", year = "2024", category = "轿车",
+            description = "经典两厢性能车，搭载 2.0T EA888 引擎，7 秒破百。",
+            thumbnail = mockImage(101, 600, 400),
+            images = listOf(
+                VehicleImage(mockImage(101, 1200, 800), "前脸"),
+                VehicleImage(mockImage(102, 1200, 800), "侧面线条"),
+                VehicleImage(mockImage(103, 1200, 800), "内饰驾驶舱"),
+                VehicleImage(mockImage(104, 1200, 800), "尾翼")
+            )
+        ),
+        Vehicle(
+            id = 2, name = "速腾 L", brand = "大众", year = "2024", category = "轿车",
+            description = "加长轴距 2791mm，后排腿部空间越级，家用舒适首选。",
+            thumbnail = mockImage(201, 600, 400),
+            images = listOf(
+                VehicleImage(mockImage(201, 1200, 800), "整车外观"),
+                VehicleImage(mockImage(202, 1200, 800), "后排空间"),
+                VehicleImage(mockImage(203, 1200, 800), "中控大屏")
+            )
+        ),
+        Vehicle(
+            id = 3, name = "迈腾 380", brand = "大众", year = "2024", category = "轿车",
+            description = "商务中型轿车，EA390 2.0T 高功，动力充沛稳重大气。",
+            thumbnail = mockImage(301, 600, 400),
+            images = listOf(
+                VehicleImage(mockImage(301, 1200, 800), "外观"),
+                VehicleImage(mockImage(302, 1200, 800), "后排老板位"),
+                VehicleImage(mockImage(303, 1200, 800), "后备箱")
+            )
+        ),
+        Vehicle(
+            id = 4, name = "途观 L", brand = "大众", year = "2024", category = "SUV",
+            description = "中型 SUV 标杆，四驱系统，7 座可选，适合家庭出游。",
+            thumbnail = mockImage(401, 600, 400),
+            images = listOf(
+                VehicleImage(mockImage(401, 1200, 800), "外观前脸"),
+                VehicleImage(mockImage(402, 1200, 800), "内饰全景"),
+                VehicleImage(mockImage(403, 1200, 800), "第三排折叠")
+            )
+        ),
+        Vehicle(
+            id = 5, name = "ID.4 纯电", brand = "大众", year = "2024", category = "新能源",
+            description = "MEB 纯电平台，续航 600km+，L2 自动驾驶，AR HUD 抬头显示。",
+            thumbnail = mockImage(501, 600, 400),
+            images = listOf(
+                VehicleImage(mockImage(501, 1200, 800), "外观流线"),
+                VehicleImage(mockImage(502, 1200, 800), "内饰 AR 抬头显示"),
+                VehicleImage(mockImage(503, 1200, 800), "电池底盘")
             )
         )
-    }
+    )
 
-    /**
-     * 获取视频列表
-     */
     fun loadVideos(onResult: (List<MediaFile>) -> Unit) {
-        val baseUrl = settings.backendUrl.trimEnd('/')
-        if (baseUrl.isBlank()) {
-            onResult(getMockVideos())
-            return
+        val base = baseUrl()
+        if (base.isBlank()) {
+            onResult(getMockVideos()); return
         }
-
+        // 后端可能没有 /api/videos，兜底 mock
         Thread {
             try {
-                val url = URL("$baseUrl/api/videos")
-                val conn = url.openConnection() as HttpURLConnection
-                conn.connectTimeout = 3000
+                val conn = (URL("$base/api/videos") as HttpURLConnection).apply {
+                    connectTimeout = 2000; readTimeout = 3000
+                }
                 if (conn.responseCode == 200) {
-                    val reader = BufferedReader(InputStreamReader(conn.inputStream))
-                    val body = reader.readText()
-                    reader.close()
+                    val body = BufferedReader(InputStreamReader(conn.inputStream)).readText()
+                    conn.disconnect()
                     onResult(parseVideos(body))
                 } else {
                     onResult(getMockVideos())
                 }
-                conn.disconnect()
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 onResult(getMockVideos())
             }
         }.start()
@@ -189,24 +182,40 @@ class MediaRepository(context: Context) {
 
     private fun parseVideos(body: String): List<MediaFile> {
         val arr = JSONArray(body)
-        val list = mutableListOf<MediaFile>()
-        for (i in 0 until arr.length()) {
+        return (0 until arr.length()).map { i ->
             val obj = arr.getJSONObject(i)
-            list.add(MediaFile(
+            MediaFile(
                 id = obj.optString("id"),
-                path = obj.optString("url"),
+                path = absolutePath(obj.optString("url")),
                 name = obj.optString("name"),
                 type = MediaFile.Type.VIDEO
-            ))
+            )
         }
-        return list
     }
 
-    private fun getMockVideos(): List<MediaFile> {
-        return listOf(
-            MediaFile("v1", "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4", "展厅宣传片", MediaFile.Type.VIDEO),
-            MediaFile("v2", "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4", "工厂参观", MediaFile.Type.VIDEO),
-            MediaFile("v3", "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4", "产品介绍", MediaFile.Type.VIDEO)
+    /**
+     * Mock 视频 —— Google 官方公开样例 CDN，稳定可访问
+     */
+    private fun getMockVideos(): List<MediaFile> = listOf(
+        MediaFile(
+            id = "v1", type = MediaFile.Type.VIDEO,
+            name = "展厅全景介绍（45秒）",
+            path = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+        ),
+        MediaFile(
+            id = "v2", type = MediaFile.Type.VIDEO,
+            name = "工厂参观纪录片（1分钟）",
+            path = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4"
+        ),
+        MediaFile(
+            id = "v3", type = MediaFile.Type.VIDEO,
+            name = "大众新能源技术展示（30秒）",
+            path = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
+        ),
+        MediaFile(
+            id = "v4", type = MediaFile.Type.VIDEO,
+            name = "机器人互动演示（40秒）",
+            path = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4"
         )
-    }
+    )
 }
