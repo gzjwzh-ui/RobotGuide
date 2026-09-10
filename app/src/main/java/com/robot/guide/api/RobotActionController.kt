@@ -187,7 +187,7 @@ class RobotActionController(context: Context) {
 
     fun listActions(onResult: (List<RobotActionInfo>?) -> Unit) {
         val baseUrl = settings.backendUrl.trimEnd('/')
-        if (baseUrl.isBlank()) { onResult(Action.values().map { Action.toInfo(it) }); return }
+        if (baseUrl.isBlank()) { onResult(Action.values().map { it.toInfo() }); return }
         Thread {
             try {
                 val url = URL("$baseUrl/api/robot/actions")
@@ -209,7 +209,7 @@ class RobotActionController(context: Context) {
                 }
                 onResult(list)
             } catch (_: Exception) {
-                onResult(Action.values().map { Action.toInfo(it) })
+                onResult(Action.values().map { it.toInfo() })
             }
         }.start()
     }
