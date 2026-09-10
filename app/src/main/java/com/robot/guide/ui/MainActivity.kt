@@ -11,17 +11,19 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.robot.guide.R
+import com.robot.guide.api.RobotActionController
 import com.robot.guide.api.RobotAIService
 import com.robot.guide.data.ChatMessage
 import com.robot.guide.databinding.ActivityMainBinding
 import com.robot.guide.util.AppSettings
 import com.robot.guide.util.BackendSync
 import com.robot.guide.util.PersonDetector
+import com.robot.guide.util.RobotSpeechRecognizer
 import com.robot.guide.util.RobotTTS
 
 /**
- * 主界面 - 三栏横屏布局（左检测 + 中对话 + 右导航）
- * 功能：摄像头实时预览 + 人脸检测 + 自动欢迎语 + 对话 + 导航
+ * 主界面 - 三栏横屏布局
+ * 功能：摄像头实时预览 + 人脸检测 + 自动欢迎语 + 语音输入 + 机器动作
  */
 class MainActivity : AppCompatActivity() {
 
@@ -30,6 +32,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var backendSync: BackendSync
     private lateinit var personDetector: PersonDetector
     private lateinit var aiService: RobotAIService
+    private lateinit var actionController: RobotActionController
+    private lateinit var speechRecognizer: RobotSpeechRecognizer
     private lateinit var chatAdapter: ChatAdapter
     private var tts: RobotTTS? = null
 
@@ -54,6 +58,8 @@ class MainActivity : AppCompatActivity() {
         backendSync = BackendSync(this)
         personDetector = PersonDetector(this)
         aiService = RobotAIService(this)
+        actionController = RobotActionController(this)
+        speechRecognizer = RobotSpeechRecognizer(this)
         tts = RobotTTS(this).also { it.start() }
 
         setupChat()
@@ -61,12 +67,13 @@ class MainActivity : AppCompatActivity() {
         setupTitleBar()
         setupQuickQuestions()
         setupInputBar()
+        setupActionButtons()
         checkAndRequestPermissions()
 
         binding.tvRobotName.text = settings.robotName
     }
 
-    // ========== 对话功能 ==========
+    // ========== 对话 ==========
 
     private fun setupChat() {
         chatAdapter = ChatAdapter()
@@ -96,8 +103,35 @@ class MainActivity : AppCompatActivity() {
                 chatAdapter.updateLastMessageWithSource(answer, sourceText, mediaRefs)
                 binding.rvChat.scrollToPosition(chatAdapter.itemCount - 1)
                 tts?.speak(answer)
+                // 自动触发匹配的机器动作
+                actionController.autoTriggerFromText(answer)
             }
         }
+    }
+
+    // ========== 语音输入 ==========
+
+    private fun startVoiceInput() {
+        if (!speechRecognizer.isSupported()) {
+            Toast.makeText(this, "设备不支持语音识别，请手动输入文字", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val lang = settings.robotLanguage
+
+        speechRecognizer.startListening(
+            language = lang,
+            onResult = { text ->
+                if (text.isNotBlank()) {
+                    sendQuestion(text)
+                }
+            },
+            onError = { msg ->
+                if (msg != "没检测到语音") {
+                    Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+                }
+            }
+        )
     }
 
     // ========== 导航栏 ==========
@@ -127,27 +161,18 @@ class MainActivity : AppCompatActivity() {
         when (target) {
             NAV_HOME -> {}
             NAV_GALLERY -> {
-                try {
-                    startActivity(Intent(this, MediaActivity::class.java).apply { putExtra("tab", 0) })
-                } catch (e: Exception) {
-                    Toast.makeText(this, "打开车辆展示失败", Toast.LENGTH_SHORT).show()
-                }
+                try { startActivity(Intent(this, MediaActivity::class.java).apply { putExtra("tab", 0) }) }
+                catch (e: Exception) { Toast.makeText(this, "打开车辆展示失败", Toast.LENGTH_SHORT).show() }
                 binding.navHome.postDelayed({ switchNav(NAV_HOME) }, 200)
             }
             NAV_VIDEO -> {
-                try {
-                    startActivity(Intent(this, MediaActivity::class.java).apply { putExtra("tab", 1) })
-                } catch (e: Exception) {
-                    Toast.makeText(this, "打开车辆视频失败", Toast.LENGTH_SHORT).show()
-                }
+                try { startActivity(Intent(this, MediaActivity::class.java).apply { putExtra("tab", 1) }) }
+                catch (e: Exception) { Toast.makeText(this, "打开车辆视频失败", Toast.LENGTH_SHORT).show() }
                 binding.navHome.postDelayed({ switchNav(NAV_HOME) }, 200)
             }
             NAV_SETTINGS -> {
-                try {
-                    startActivity(Intent(this, SettingsActivity::class.java))
-                } catch (e: Exception) {
-                    Toast.makeText(this, "打开设置失败", Toast.LENGTH_SHORT).show()
-                }
+                try { startActivity(Intent(this, SettingsActivity::class.java)) }
+                catch (e: Exception) { Toast.makeText(this, "打开设置失败", Toast.LENGTH_SHORT).show() }
                 binding.navHome.postDelayed({ switchNav(NAV_HOME) }, 200)
             }
         }
@@ -166,6 +191,7 @@ class MainActivity : AppCompatActivity() {
             langIdx = (langIdx + 1) % languages.size
             settings.robotLanguage = langCodes[langIdx]
             binding.btnLanguage.text = languages[langIdx].substringAfter(" ")
+            tts?.setLanguage(langCodes[langIdx])
         }
 
         binding.btnMenu.setOnClickListener {
@@ -177,29 +203,25 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupQuickQuestions() {
         val questions = listOf(
-            "健有哪些车型?",
-            "工厂怎么参观?",
-            "新能源技术",
-            "展厅怎么走?",
-            "价格多少?"
+            "健有哪些车型?", "工厂怎么参观?", "新能源技术", "展厅怎么走?", "价格多少?"
         )
-
         binding.rvQuickQuestions.layoutManager =
             LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
-        binding.rvQuickQuestions.adapter = QuickQuestionAdapter(questions) { q ->
-            sendQuestion(q)
-        }
+        binding.rvQuickQuestions.adapter = QuickQuestionAdapter(questions) { sendQuestion(it) }
     }
 
     // ========== 输入栏 ==========
 
     private fun setupInputBar() {
-        binding.btnSend.setOnClickListener {
-            sendQuestion(binding.etInput.text?.toString() ?: "")
-        }
+        binding.btnSend.setOnClickListener { sendQuestion(binding.etInput.text?.toString() ?: "") }
 
+        // 语音按钮：长按开始录音，松开发送
         binding.btnVoice.setOnClickListener {
-            Toast.makeText(this, "语音输入功能开发中…", Toast.LENGTH_SHORT).show()
+            if (speechRecognizer.isListening()) {
+                speechRecognizer.stopListening()
+            } else {
+                startVoiceInput()
+            }
         }
 
         binding.etInput.setOnEditorActionListener { _, actionId, _ ->
@@ -207,6 +229,20 @@ class MainActivity : AppCompatActivity() {
                 sendQuestion(binding.etInput.text?.toString() ?: "")
                 true
             } else false
+        }
+    }
+
+    // ========== 机器动作按钮（调试用） ==========
+
+    private fun setupActionButtons() {
+        // 从左栏的"头部"状态点击触发动作
+        binding.tvHeadStatus.setOnClickListener {
+            // 随机触发一个动作演示
+            val actions = RobotActionController.Action.values()
+            val action = actions.random()
+            actionController.execute(action) { success, msg ->
+                Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -251,8 +287,8 @@ class MainActivity : AppCompatActivity() {
         // 2. 人脸检测 + 摄像头预览 + 自动欢迎语
         if (settings.personDetection) {
             personDetector.start(
-                binding.cameraPreview,  // PreviewView 绑定
-                this,                   // LifecycleOwner = AppCompatActivity
+                binding.cameraPreview,
+                this,
                 PersonDetector.Callback(
                     onPersonEnter = {
                         runOnUiThread {
@@ -263,16 +299,19 @@ class MainActivity : AppCompatActivity() {
                             binding.tvDetectDetail.setTextColor(
                                 resources.getColor(R.color.success, theme))
 
-                            // 🎙️ TTS 欢迎语
+                            // TTS 欢迎语
                             val greeting = settings.greeting.ifBlank {
                                 "有什么可以帮到你，我是${settings.robotName}"
                             }
                             tts?.speak(greeting)
 
-                            // 同时在对话区显示欢迎消息
+                            // 打招呼动作
+                            actionController.execute(RobotActionController.Action.WAVE)
+                            actionController.execute(RobotActionController.Action.GREET)
+
+                            // 对话区显示欢迎
                             chatAdapter.addMessage(ChatMessage(
-                                role = ChatMessage.Role.BOT,
-                                content = greeting
+                                role = ChatMessage.Role.BOT, content = greeting
                             ))
                             binding.rvChat.scrollToPosition(chatAdapter.itemCount - 1)
                         }
@@ -313,11 +352,13 @@ class MainActivity : AppCompatActivity() {
     override fun onPause() {
         super.onPause()
         try { personDetector.stop() } catch (_: Exception) {}
+        speechRecognizer.destroy()
     }
 
     override fun onDestroy() {
         super.onDestroy()
         try { personDetector.stop() } catch (_: Exception) {}
+        speechRecognizer.destroy()
         tts?.shutdown()
     }
 }

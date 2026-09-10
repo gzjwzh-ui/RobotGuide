@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.util.Log
+import android.view.SurfaceControl
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
@@ -17,8 +18,7 @@ import java.util.concurrent.Executors
 
 /**
  * 人脸/人体检测 + 摄像头预览
- * - 前摄摄像头持续预览到 PreviewView
- * - 同时做人脸检测，发现有人进入视野后触发回调
+ * 独立 Activity 级别绑定，确保 Preview 正确显示
  */
 class PersonDetector(private val context: Context) {
 
@@ -28,11 +28,10 @@ class PersonDetector(private val context: Context) {
     private var faceDetector: com.google.mlkit.vision.face.FaceDetector? = null
     private var running = false
 
-    // 状态管理
     private var lastTriggerTime = 0L
-    private val cooldownMs = 10000L   // 10秒冷却
+    private val cooldownMs = 10000L
     private var consecutiveFramesWithoutFace = 0
-    private val leaveThreshold = 30  // 连续30帧没脸才算"人离开了"
+    private val leaveThreshold = 30
 
     data class Callback(
         val onPersonEnter: () -> Unit,
@@ -41,7 +40,6 @@ class PersonDetector(private val context: Context) {
     )
 
     private var callback: Callback? = null
-    private var previewView: PreviewView? = null
 
     fun isSupported(): Boolean {
         return ContextCompat.checkSelfPermission(
@@ -52,7 +50,7 @@ class PersonDetector(private val context: Context) {
     /**
      * 启动摄像头预览 + 人脸检测
      * @param previewView UI预览控件
-     * @param lifecycleOwner 必须是真正的 LifecycleOwner（如 AppCompatActivity）
+     * @param lifecycleOwner AppCompatActivity（LifecycleOwner）
      */
     fun start(previewView: PreviewView, lifecycleOwner: androidx.lifecycle.LifecycleOwner, cb: Callback) {
         if (running) return
@@ -60,10 +58,8 @@ class PersonDetector(private val context: Context) {
             Log.w(tag, "没有相机权限，跳过人脸检测")
             return
         }
-        this.previewView = previewView
         this.callback = cb
 
-        // 初始化ML Kit人脸检测器
         val options = FaceDetectorOptions.Builder()
             .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_FAST)
             .setContourMode(FaceDetectorOptions.CONTOUR_MODE_NONE)
@@ -73,26 +69,27 @@ class PersonDetector(private val context: Context) {
         ProcessCameraProvider.getInstance(context).addListener({
             try {
                 cameraProvider = ProcessCameraProvider.getInstance(context).get()
-                bindCamera(lifecycleOwner)
+                bindCamera(previewView, lifecycleOwner)
             } catch (e: Exception) {
-                Log.e(tag, "无法启动相机检测", e)
+                Log.e(tag, "无法启动相机", e)
             }
         }, ContextCompat.getMainExecutor(context))
 
         running = true
-        Log.d(tag, "人脸检测+预览已启动")
     }
 
-    private fun bindCamera(lifecycleOwner: androidx.lifecycle.LifecycleOwner) {
+    private fun bindCamera(previewView: PreviewView, lifecycleOwner: androidx.lifecycle.LifecycleOwner) {
         val provider = cameraProvider ?: return
 
-        // 1. 创建 Preview 并绑定到 PreviewView
-        val preview = Preview.Builder().build().also {
-            it.setSurfaceProvider(previewView?.surfaceProvider)
-        }
+        // Preview - 绑定到 PreviewView 的 surface
+        val preview = Preview.Builder()
+            .setTargetResolution(android.util.Size(640, 480))
+            .build()
+        preview.setSurfaceProvider(previewView.surfaceProvider)
 
-        // 2. 创建 ImageAnalysis 做人脸检测
+        // ImageAnalysis - 做人脸检测
         val analysis = ImageAnalysis.Builder()
+            .setTargetResolution(android.util.Size(320, 240))
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
             .build()
             .also {
@@ -106,9 +103,10 @@ class PersonDetector(private val context: Context) {
             provider.bindToLifecycle(
                 lifecycleOwner,
                 CameraSelector.DEFAULT_FRONT_CAMERA,
-                preview, analysis
+                preview,
+                analysis
             )
-            Log.d(tag, "相机已绑定到生命周期 + PreviewView")
+            Log.d(tag, "相机绑定成功 (Preview + Analysis)")
         } catch (e: Exception) {
             Log.e(tag, "绑定相机失败", e)
         }
@@ -137,7 +135,7 @@ class PersonDetector(private val context: Context) {
                     }
                 }
                 ?.addOnFailureListener {
-                    Log.w(tag, "人脸检测失败: ${it.message}")
+                    // 忽略单帧失败
                 }
                 ?.addOnCompleteListener {
                     imageProxy.close()
@@ -154,6 +152,5 @@ class PersonDetector(private val context: Context) {
             faceDetector?.close()
         } catch (_: Exception) {}
         running = false
-        Log.d(tag, "人脸检测已停止")
     }
 }
