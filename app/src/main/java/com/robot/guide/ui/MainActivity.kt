@@ -3,7 +3,6 @@ package com.robot.guide.ui
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
@@ -22,7 +21,7 @@ import com.robot.guide.util.RobotTTS
 
 /**
  * 主界面 - 三栏横屏布局（左检测 + 中对话 + 右导航）
- * 合并原 ChatActivity 对话功能，不再跳转
+ * 功能：摄像头实时预览 + 人脸检测 + 自动欢迎语 + 对话 + 导航
  */
 class MainActivity : AppCompatActivity() {
 
@@ -38,8 +37,6 @@ class MainActivity : AppCompatActivity() {
         Manifest.permission.CAMERA,
         Manifest.permission.RECORD_AUDIO
     )
-
-    private var currentNav = NAV_HOME
 
     companion object {
         const val NAV_HOME = 0
@@ -66,11 +63,10 @@ class MainActivity : AppCompatActivity() {
         setupInputBar()
         checkAndRequestPermissions()
 
-        // 更新机器人名字
         binding.tvRobotName.text = settings.robotName
     }
 
-    // ========== 对话功能（从 ChatActivity 合并） ==========
+    // ========== 对话功能 ==========
 
     private fun setupChat() {
         chatAdapter = ChatAdapter()
@@ -82,19 +78,14 @@ class MainActivity : AppCompatActivity() {
         val question = text.trim()
         if (question.isEmpty()) return
 
-        // 1. 添加用户消息
         chatAdapter.addMessage(ChatMessage(role = ChatMessage.Role.USER, content = question))
         binding.rvChat.scrollToPosition(chatAdapter.itemCount - 1)
-
-        // 2. 清空输入框
         binding.etInput.setText("")
 
-        // 3. 添加机器人占位消息
         val placeholdIdx = chatAdapter.itemCount
         chatAdapter.addMessage(ChatMessage(role = ChatMessage.Role.BOT, content = ""))
         binding.rvChat.scrollToPosition(placeholdIdx)
 
-        // 4. 调用 AI 服务（优先固定问答库 → AI → 兜底）
         aiService.answer(question, chatAdapter.getMessages()) { answer, source, mediaRefs ->
             runOnUiThread {
                 val sourceText = when (source) {
@@ -104,11 +95,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 chatAdapter.updateLastMessageWithSource(answer, sourceText, mediaRefs)
                 binding.rvChat.scrollToPosition(chatAdapter.itemCount - 1)
-
-                // 5. TTS 播报
-                if (settings.useAI) {
-                    tts?.speak(answer)
-                }
+                tts?.speak(answer)
             }
         }
     }
@@ -123,41 +110,44 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun switchNav(target: Int) {
-        currentNav = target
-
-        // 更新选中状态
         binding.navHome.isSelected = target == NAV_HOME
         binding.navGallery.isSelected = target == NAV_GALLERY
         binding.navVideo.isSelected = target == NAV_VIDEO
         binding.navSettings.isSelected = target == NAV_SETTINGS
 
-        // 更新文字颜色
-        val navs = listOf(binding.navHome to binding.navHome.getChildAt(1),
-                          binding.navGallery to binding.navGallery.getChildAt(1),
-                          binding.navVideo to binding.navVideo.getChildAt(1),
-                          binding.navSettings to binding.navSettings.getChildAt(1))
-        navs.forEachIndexed { idx, pair ->
-            val tv = pair.second as android.widget.TextView
-            tv.setTextColor(resources.getColor(
+        val navItems = listOf(
+            binding.navHome, binding.navGallery, binding.navVideo, binding.navSettings
+        )
+        navItems.forEachIndexed { idx, nav ->
+            val tv = nav.getChildAt(1) as? android.widget.TextView
+            tv?.setTextColor(resources.getColor(
                 if (idx == target) R.color.nav_active else R.color.nav_inactive, theme))
         }
 
-        // 执行导航动作
         when (target) {
-            NAV_HOME -> {
-                // 切回对话（默认就是）
-            }
+            NAV_HOME -> {}
             NAV_GALLERY -> {
-                startActivity(Intent(this, MediaActivity::class.java).apply { putExtra("tab", 0) })
-                // 延迟重置选中，返回时会恢复
+                try {
+                    startActivity(Intent(this, MediaActivity::class.java).apply { putExtra("tab", 0) })
+                } catch (e: Exception) {
+                    Toast.makeText(this, "打开车辆展示失败", Toast.LENGTH_SHORT).show()
+                }
                 binding.navHome.postDelayed({ switchNav(NAV_HOME) }, 200)
             }
             NAV_VIDEO -> {
-                startActivity(Intent(this, MediaActivity::class.java).apply { putExtra("tab", 1) })
+                try {
+                    startActivity(Intent(this, MediaActivity::class.java).apply { putExtra("tab", 1) })
+                } catch (e: Exception) {
+                    Toast.makeText(this, "打开车辆视频失败", Toast.LENGTH_SHORT).show()
+                }
                 binding.navHome.postDelayed({ switchNav(NAV_HOME) }, 200)
             }
             NAV_SETTINGS -> {
-                startActivity(Intent(this, SettingsActivity::class.java))
+                try {
+                    startActivity(Intent(this, SettingsActivity::class.java))
+                } catch (e: Exception) {
+                    Toast.makeText(this, "打开设置失败", Toast.LENGTH_SHORT).show()
+                }
                 binding.navHome.postDelayed({ switchNav(NAV_HOME) }, 200)
             }
         }
@@ -205,12 +195,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupInputBar() {
         binding.btnSend.setOnClickListener {
-            val text = binding.etInput.text?.toString() ?: ""
-            sendQuestion(text)
+            sendQuestion(binding.etInput.text?.toString() ?: "")
         }
 
         binding.btnVoice.setOnClickListener {
-            // 简化：模拟语音输入 → 直接引导对话
             Toast.makeText(this, "语音输入功能开发中…", Toast.LENGTH_SHORT).show()
         }
 
@@ -260,31 +248,56 @@ class MainActivity : AppCompatActivity() {
             binding.tvBackendStatus.setTextColor(resources.getColor(R.color.text_hint, theme))
         }
 
-        // 2. 人脸检测（更新 UI 状态）
+        // 2. 人脸检测 + 摄像头预览 + 自动欢迎语
         if (settings.personDetection) {
-            personDetector.start(PersonDetector.Callback(
-                onPersonEnter = {
-                    runOnUiThread {
-                        binding.tvHumanStatus.text = "HUMAN DETECTED"
-                        binding.tvHumanStatus.setTextColor(resources.getColor(R.color.colorPrimary, theme))
-                    }
-                },
-                onPersonLeave = {
-                    runOnUiThread {
-                        binding.tvHumanStatus.text = "NO HUMAN"
-                        binding.tvHumanStatus.setTextColor(resources.getColor(R.color.text_hint, theme))
-                        binding.tvDetectDetail.text = "● 等待检测..."
-                    }
-                },
-                onStatusChange = { detected ->
-                    runOnUiThread {
-                        if (detected) {
+            personDetector.start(
+                binding.cameraPreview,  // PreviewView 绑定
+                this,                   // LifecycleOwner = AppCompatActivity
+                PersonDetector.Callback(
+                    onPersonEnter = {
+                        runOnUiThread {
+                            binding.tvHumanStatus.text = "HUMAN DETECTED"
+                            binding.tvHumanStatus.setTextColor(
+                                resources.getColor(R.color.colorPrimary, theme))
                             binding.tvDetectDetail.text = "● 检测到 1 人 · 置信度 98%"
-                            binding.tvDetectDetail.setTextColor(resources.getColor(R.color.success, theme))
+                            binding.tvDetectDetail.setTextColor(
+                                resources.getColor(R.color.success, theme))
+
+                            // 🎙️ TTS 欢迎语
+                            val greeting = settings.greeting.ifBlank {
+                                "有什么可以帮到你，我是${settings.robotName}"
+                            }
+                            tts?.speak(greeting)
+
+                            // 同时在对话区显示欢迎消息
+                            chatAdapter.addMessage(ChatMessage(
+                                role = ChatMessage.Role.BOT,
+                                content = greeting
+                            ))
+                            binding.rvChat.scrollToPosition(chatAdapter.itemCount - 1)
+                        }
+                    },
+                    onPersonLeave = {
+                        runOnUiThread {
+                            binding.tvHumanStatus.text = "NO HUMAN"
+                            binding.tvHumanStatus.setTextColor(
+                                resources.getColor(R.color.text_hint, theme))
+                            binding.tvDetectDetail.text = "● 等待检测..."
+                            binding.tvDetectDetail.setTextColor(
+                                resources.getColor(R.color.text_hint, theme))
+                        }
+                    },
+                    onStatusChange = { detected ->
+                        runOnUiThread {
+                            if (detected) {
+                                binding.tvDetectDetail.text = "● 检测到 1 人 · 置信度 98%"
+                                binding.tvDetectDetail.setTextColor(
+                                    resources.getColor(R.color.success, theme))
+                            }
                         }
                     }
-                }
-            ))
+                )
+            )
         }
     }
 
@@ -299,12 +312,12 @@ class MainActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
-        personDetector.stop()
+        try { personDetector.stop() } catch (_: Exception) {}
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        personDetector.stop()
+        try { personDetector.stop() } catch (_: Exception) {}
         tts?.shutdown()
     }
 }

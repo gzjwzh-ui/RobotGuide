@@ -10,9 +10,8 @@
     <!-- ==================== 左栏：人脸检测面板 ==================== -->
     <LinearLayout
         android:id="@+id/leftPanel"
-        android:layout_width="0dp"
+        android:layout_width="280dp"
         android:layout_height="match_parent"
-        android:layout_weight="280"
         android:orientation="vertical"
         android:gravity="center_horizontal"
         android:paddingTop="40dp"
