@@ -1,6 +1,7 @@
 package com.robot.guide.ui
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -82,9 +83,7 @@ class MediaActivity : AppCompatActivity() {
     private fun initializeExoPlayer() {
         if (exoPlayer == null) {
             exoPlayer = ExoPlayer.Builder(this).build()
-            binding.viewPager.findViewByPosition(binding.viewPager.currentItem)?.let {
-                // 在实际使用中，这里需要为视频tab的播放器设置ExoPlayer
-            }
+            // 在实际使用中，这里需要为视频tab的播放器设置ExoPlayer
         }
     }
 
@@ -178,26 +177,7 @@ class MediaActivity : AppCompatActivity() {
     }
 
     private fun openFullscreenImage(url: String) {
-        // 简化版本 - 全屏显示图片
-        val intent = Intent(this, FullscreenImageActivity::class.java)
-        intent.putExtra("url", url)
-        startActivity(intent)
-    }
-}
-
-/**
- * 全屏图片查看（占位Activity）
- */
-class FullscreenImageActivity : AppCompatActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        val iv = ImageView(this).apply {
-            Glide.with(this@FullscreenImageActivity)
-                .load(intent.getStringExtra("url"))
-                .into(this)
-            setBackgroundColor(0xFF000000.toInt())
-            setOnClickListener { finish() }
-        }
-        setContentView(iv)
+        // 简化版本 - Toast 提示
+        android.widget.Toast.makeText(this, "图片: $url", android.widget.Toast.LENGTH_SHORT).show()
     }
 }

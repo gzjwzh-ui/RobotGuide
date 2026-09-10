@@ -1,6 +1,7 @@
 package com.robot.guide.ui
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -34,20 +35,20 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun loadSettings() {
         // ===== 后端 =====
-        binding.etBackendUrl?.setText(settings.backendUrl)
-        binding.swSyncEnabled?.isChecked = settings.syncEnabled
+        binding.etBackendUrl.setText(settings.backendUrl)
+        binding.swSyncEnabled.isChecked = settings.syncEnabled
 
         // ===== 机器人身份 =====
-        binding.etRobotName?.setText(settings.robotName)
-        binding.etGreeting?.setText(settings.greeting)
-        binding.etAutoWakeWords?.setText(settings.autoWakeWords)
+        binding.etRobotName.setText(settings.robotName)
+        binding.etGreeting.setText(settings.greeting)
+        binding.etAutoWakeWords.setText(settings.autoWakeWords)
 
-        binding.spnLanguage?.setSelection(
+        binding.spnLanguage.setSelection(
             listOf("zh-CN", "yue-HK", "en-US").indexOf(settings.robotLanguage).coerceAtLeast(0)
         )
 
-        binding.swPersonDetection?.isChecked = settings.personDetection
-        binding.etIdleTimeout?.setText(settings.idleTimeoutMin.toString())
+        binding.swPersonDetection.isChecked = settings.personDetection
+        binding.etIdleTimeout.setText(settings.idleTimeoutMin.toString())
 
         // ===== AI =====
         binding.swUseAI.isChecked = settings.useAI
@@ -92,8 +93,8 @@ class SettingsActivity : AppCompatActivity() {
                 .show()
         }
 
-        binding.btnTestBackend?.setOnClickListener {
-            val url = binding.etBackendUrl?.text?.toString()?.trim() ?: ""
+        binding.btnTestBackend.setOnClickListener {
+            val url = binding.etBackendUrl.text?.toString()?.trim() ?: ""
             if (url.isBlank()) {
                 Toast.makeText(this, "请输入后端地址", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
@@ -106,8 +107,8 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
 
-        binding.btnSyncNow?.setOnClickListener {
-            val url = binding.etBackendUrl?.text?.toString()?.trim() ?: ""
+        binding.btnSyncNow.setOnClickListener {
+            val url = binding.etBackendUrl.text?.toString()?.trim() ?: ""
             if (url.isBlank()) {
                 Toast.makeText(this, "请输入后端地址", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
@@ -126,20 +127,18 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun saveSettings() {
         // ===== 后端 =====
-        binding.etBackendUrl?.text?.toString()?.trim()?.let { settings.backendUrl = it }
-        binding.swSyncEnabled?.let { settings.syncEnabled = it.isChecked }
+        binding.etBackendUrl.text.toString().trim().let { settings.backendUrl = it }
+        settings.syncEnabled = binding.swSyncEnabled.isChecked
 
         // ===== 机器人身份 =====
-        binding.etRobotName?.text?.toString()?.trim()?.let { settings.robotName = it }
-        binding.etGreeting?.text?.toString()?.trim()?.let { settings.greeting = it }
-        binding.etAutoWakeWords?.text?.toString()?.trim()?.let { settings.autoWakeWords = it }
-        binding.spnLanguage?.let {
-            val langs = listOf("zh-CN", "yue-HK", "en-US")
-            settings.robotLanguage = langs[it.selectedItemPosition.coerceIn(0, 2)]
-        }
+        binding.etRobotName.text.toString().trim().let { settings.robotName = it }
+        binding.etGreeting.text.toString().trim().let { settings.greeting = it }
+        binding.etAutoWakeWords.text.toString().trim().let { settings.autoWakeWords = it }
+        val langs = listOf("zh-CN", "yue-HK", "en-US")
+        settings.robotLanguage = langs[binding.spnLanguage.selectedItemPosition.coerceIn(0, 2)]
 
-        binding.swPersonDetection?.let { settings.personDetection = it.isChecked }
-        binding.etIdleTimeout?.text?.toString()?.toIntOrNull()?.let { settings.idleTimeoutMin = it }
+        settings.personDetection = binding.swPersonDetection.isChecked
+        binding.etIdleTimeout.text.toString().toIntOrNull()?.let { settings.idleTimeoutMin = it }
 
         // ===== AI =====
         settings.useAI = binding.swUseAI.isChecked

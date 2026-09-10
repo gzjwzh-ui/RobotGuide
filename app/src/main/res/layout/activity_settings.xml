@@ -81,6 +81,181 @@
                     android:layout_height="wrap_content"
                     android:orientation="vertical">
 
+                    <!-- 后端URL -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="后端地址"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="14sp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="4dp">
+
+                        <EditText
+                            android:id="@+id/etBackendUrl"
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="wrap_content"
+                            android:background="@drawable/bg_input_field"
+                            android:backgroundTint="@color/bg_input"
+                            android:textColor="@color/text_primary"
+                            android:padding="12dp"
+                            android:textSize="14sp"
+                            android:hint="http://192.168.0.251:5000" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnTestBackend"
+                            style="@style/ButtonPrimary"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:text="测试" />
+                    </LinearLayout>
+
+                    <!-- 自动同步 -->
+                    <com.google.android.material.switchmaterial.SwitchMaterial
+                        android:id="@+id/swSyncEnabled"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="自动同步"
+                        android:textColor="@color/text_primary"
+                        android:padding="8dp" />
+
+                    <!-- 立即同步 -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnSyncNow"
+                        style="@style/ButtonPrimary"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="立即同步" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginTop="8dp"
+                        android:background="@color/divider" />
+
+                    <!-- 机器人名字 -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="机器人名字"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="14sp"
+                        android:paddingTop="12dp" />
+
+                    <EditText
+                        android:id="@+id/etRobotName"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:background="@drawable/bg_input_field"
+                        android:backgroundTint="@color/bg_input"
+                        android:textColor="@color/text_primary"
+                        android:padding="12dp"
+                        android:textSize="14sp" />
+
+                    <!-- 开场白 -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="开场白"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="14sp"
+                        android:paddingTop="12dp" />
+
+                    <EditText
+                        android:id="@+id/etGreeting"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:background="@drawable/bg_input_field"
+                        android:backgroundTint="@color/bg_input"
+                        android:textColor="@color/text_primary"
+                        android:padding="12dp"
+                        android:textSize="14sp" />
+
+                    <!-- 唤醒词 -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="自动唤醒词(逗号分隔)"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="14sp"
+                        android:paddingTop="12dp" />
+
+                    <EditText
+                        android:id="@+id/etAutoWakeWords"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:background="@drawable/bg_input_field"
+                        android:backgroundTint="@color/bg_input"
+                        android:textColor="@color/text_primary"
+                        android:padding="12dp"
+                        android:textSize="14sp"
+                        android:hint="你好,您好" />
+
+                    <!-- 语言 -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="机器人语言"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="14sp"
+                        android:paddingTop="12dp" />
+
+                    <Spinner
+                        android:id="@+id/spnLanguage"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:background="@drawable/bg_input_field"
+                        android:backgroundTint="@color/bg_input"
+                        android:padding="8dp" />
+
+                    <!-- 人体检测 -->
+                    <com.google.android.material.switchmaterial.SwitchMaterial
+                        android:id="@+id/swPersonDetection"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="人体检测自动问候"
+                        android:textColor="@color/text_primary"
+                        android:paddingTop="12dp" />
+
+                    <!-- 空闲超时 -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="空闲超时(分钟)"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="14sp"
+                        android:paddingTop="12dp" />
+
+                    <EditText
+                        android:id="@+id/etIdleTimeout"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:background="@drawable/bg_input_field"
+                        android:backgroundTint="@color/bg_input"
+                        android:textColor="@color/text_primary"
+                        android:padding="12dp"
+                        android:textSize="14sp"
+                        android:inputType="number" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginTop="16dp"
+                        android:background="@color/divider" />
+
                     <!-- 启用AI -->
                     <com.google.android.material.switchmaterial.SwitchMaterial
                         android:id="@+id/swUseAI"
