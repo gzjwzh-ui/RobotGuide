@@ -151,13 +151,13 @@ class AppSettings(context: Context) {
     }
 
     /**
-     * 语言代码 -> Locale
+     * 语言代码 -> Locale（与 RobotTTS.parseLocale 保持一致）
      */
     fun getLocale(): java.util.Locale {
         return when (robotLanguage) {
             "yue-HK" -> java.util.Locale("zh", "HK")
             "en-US" -> java.util.Locale.US
-            else -> java.util.Locale.CHINESE
+            else -> java.util.Locale.SIMPLIFIED_CHINESE
         }
     }
 

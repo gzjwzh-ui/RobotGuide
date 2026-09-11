@@ -380,7 +380,18 @@ class MainActivity : AppCompatActivity() {
                     binding.tvBackendStatus.text = if (ok) "● 在线" else "● 离线"
                     binding.tvBackendStatus.setTextColor(
                         resources.getColor(if (ok) R.color.success else R.color.error, theme))
-                    if (ok) Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+                    if (ok) {
+                        // 同步成功后重新加载 TTS 语言（后台可能改了语言设置）
+                        val syncedLang = settings.robotLanguage
+                        tts?.reloadLanguage(syncedLang)
+                        // 更新标题栏语言按钮显示
+                        val languages = listOf("zh-CN 普通话", "yue-HK 粤语", "en-US English")
+                        val langCodes = listOf("zh-CN", "yue-HK", "en-US")
+                        val langIdx = langCodes.indexOf(syncedLang).coerceAtLeast(0)
+                        binding.btnLanguage.text = languages[langIdx].substringAfter(" ")
+                        binding.tvRobotName.text = settings.robotName
+                        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+                    }
                 }
             }
         } else {

@@ -133,7 +133,7 @@ def init_db():
                 (v[0], v[1], v[2], v[3], v[4], v[5], v[6], "", v[7], now, now))
 
     defaults = {
-        "robot_name": "小胖", "language": "auto",
+        "robot_name": "小胖", "language": "zh-CN",
         "greeting": "您好！我是{robot_name}，有什么可以帮您的吗？",
         "auto_wake_words": "你好,您好,在吗",
         "api_key": "YOUR_ARK_API_KEY",
@@ -144,6 +144,9 @@ def init_db():
     }
     for k, v in defaults.items():
         c.execute("INSERT OR IGNORE INTO robot_config(key,value) VALUES(?,?)", (k, v))
+
+    # 修复旧库中可能存在的 "auto" 语言值 → "zh-CN"
+    c.execute("UPDATE robot_config SET value='zh-CN' WHERE key='language' AND value='auto'")
 
     db.commit()
     db.close()
