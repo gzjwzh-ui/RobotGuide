@@ -52,6 +52,11 @@ jobs:
         echo "===== BUILD OUTPUT (last 100 lines) ====="
         tail -n 100 build_output.txt || true
         echo "===== END BUILD OUTPUT ====="
+        # Write to step summary for API access
+        echo "### Build Output (last 100 lines)" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        tail -n 100 build_output.txt >> $GITHUB_STEP_SUMMARY || true
+        echo '```' >> $GITHUB_STEP_SUMMARY
 
     - name: 📤 Upload build log on failure
       if: failure()
