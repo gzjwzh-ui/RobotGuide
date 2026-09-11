@@ -55,11 +55,20 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <!-- AI配置区域 -->
+            <!-- 说明 -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/settings_ai_title"
+                android:text="机器人身份、语言、开场白、AI 等配置请在网页后台管理（http://后端IP:5000），此处仅保留 APP 专属设置。"
+                android:textColor="@color/text_hint"
+                android:textSize="12sp"
+                android:paddingBottom="16dp" />
+
+            <!-- APP 专属设置 -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="APP 设置"
                 android:textColor="@color/text_secondary"
                 android:textSize="14sp"
                 android:textStyle="bold"
@@ -137,95 +146,6 @@
                         android:layout_marginTop="8dp"
                         android:background="@color/divider" />
 
-                    <!-- 机器人名字 -->
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="机器人名字"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="14sp"
-                        android:paddingTop="12dp" />
-
-                    <EditText
-                        android:id="@+id/etRobotName"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:background="@drawable/bg_input_field"
-                        android:backgroundTint="@color/bg_input"
-                        android:textColor="@color/text_primary"
-                        android:padding="12dp"
-                        android:textSize="14sp" />
-
-                    <!-- 开场白 -->
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="开场白"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="14sp"
-                        android:paddingTop="12dp" />
-
-                    <EditText
-                        android:id="@+id/etGreeting"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:background="@drawable/bg_input_field"
-                        android:backgroundTint="@color/bg_input"
-                        android:textColor="@color/text_primary"
-                        android:padding="12dp"
-                        android:textSize="14sp" />
-
-                    <!-- 唤醒词 -->
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="自动唤醒词(逗号分隔)"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="14sp"
-                        android:paddingTop="12dp" />
-
-                    <EditText
-                        android:id="@+id/etAutoWakeWords"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:background="@drawable/bg_input_field"
-                        android:backgroundTint="@color/bg_input"
-                        android:textColor="@color/text_primary"
-                        android:padding="12dp"
-                        android:textSize="14sp"
-                        android:hint="你好,您好" />
-
-                    <!-- 语言 -->
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="机器人语言（后台可同步）"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="14sp"
-                        android:paddingTop="12dp" />
-
-                    <Spinner
-                        android:id="@+id/spnLanguage"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:background="@drawable/bg_input_field"
-                        android:backgroundTint="@color/bg_input"
-                        android:padding="8dp"
-                        android:entries="@array/language_entries" />
-
-                    <!-- 人体检测 -->
-                    <com.google.android.material.switchmaterial.SwitchMaterial
-                        android:id="@+id/swPersonDetection"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="人体检测自动问候"
-                        android:textColor="@color/text_primary"
-                        android:paddingTop="12dp" />
-
                     <!-- TTS 音量调节 -->
                     <TextView
                         android:layout_width="match_parent"
@@ -275,150 +195,15 @@
 
                     </LinearLayout>
 
-                    <!-- 空闲超时 -->
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="空闲超时(分钟)"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="14sp"
-                        android:paddingTop="12dp" />
-
-                    <EditText
-                        android:id="@+id/etIdleTimeout"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:background="@drawable/bg_input_field"
-                        android:backgroundTint="@color/bg_input"
-                        android:textColor="@color/text_primary"
-                        android:padding="12dp"
-                        android:textSize="14sp"
-                        android:inputType="number" />
-
-                    <View
-                        android:layout_width="match_parent"
-                        android:layout_height="1dp"
-                        android:layout_marginTop="16dp"
-                        android:background="@color/divider" />
-
-                    <!-- 启用AI -->
-                    <com.google.android.material.switchmaterial.SwitchMaterial
-                        android:id="@+id/swUseAI"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="@string/settings_ai_use"
-                        android:textColor="@color/text_primary"
-                        android:textSize="16sp"
-                        android:padding="8dp" />
-
-                    <View
-                        android:layout_width="match_parent"
-                        android:layout_height="1dp"
-                        android:background="@color/divider" />
-
-                    <!-- API Key -->
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="@string/settings_ai_api_key"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="14sp"
-                        android:paddingTop="12dp" />
-
-                    <EditText
-                        android:id="@+id/etApiKey"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:background="@drawable/bg_input_field"
-                        android:backgroundTint="@color/bg_input"
-                        android:textColor="@color/text_primary"
-                        android:padding="12dp"
-                        android:textSize="14sp"
-                        android:inputType="textPassword"
-                        android:hint="在此粘贴豆包API Key" />
-
-                    <!-- 模型ID -->
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="@string/settings_ai_model"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="14sp"
-                        android:paddingTop="16dp" />
-
-                    <EditText
-                        android:id="@+id/etModelId"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:background="@drawable/bg_input_field"
-                        android:backgroundTint="@color/bg_input"
-                        android:textColor="@color/text_primary"
-                        android:padding="12dp"
-                        android:textSize="14sp"
-                        android:hint="例如: doubao-pro-32k" />
-
-                    <!-- 系统提示词 -->
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="@string/settings_ai_system_prompt"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="14sp"
-                        android:paddingTop="16dp" />
-
-                    <EditText
-                        android:id="@+id/etSystemPrompt"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:background="@drawable/bg_input_field"
-                        android:backgroundTint="@color/bg_input"
-                        android:textColor="@color/text_primary"
-                        android:padding="12dp"
-                        android:textSize="14sp"
-                        android:inputType="textMultiLine"
-                        android:lines="3"
-                        android:gravity="top"
-                        android:hint="定义机器人身份和行为..." />
-
-                    <!-- 匹配阈值 -->
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="@string/settings_match_threshold"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="14sp"
-                        android:paddingTop="16dp" />
-
-                    <SeekBar
-                        android:id="@+id/sbThreshold"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:max="100"
-                        android:progress="70"
-                        android:progressTint="@color/colorPrimary" />
-
-                    <TextView
-                        android:id="@+id/tvThresholdValue"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center"
-                        android:textColor="@color/colorAccent"
-                        android:textSize="16sp"
-                        android:text="70" />
-
                 </LinearLayout>
 
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- 问答库区域 -->
+            <!-- 问答库快捷入口 -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/settings_qa_title"
+                android:text="问答库"
                 android:textColor="@color/text_secondary"
                 android:textSize="14sp"
                 android:textStyle="bold"
@@ -439,24 +224,6 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/settings_qa_manage" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnImportQA"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:backgroundTint="@color/bg_input"
-                    android:textColor="@color/text_primary"
-                    android:text="@string/settings_qa_import" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnExportQA"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:backgroundTint="@color/bg_input"
-                    android:textColor="@color/text_primary"
-                    android:text="@string/settings_qa_export" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnClearQA"
