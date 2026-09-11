@@ -267,8 +267,6 @@ class PersonDetector(private val context: Context) {
             else -> (info.orientation + 90) % 360
         }
         try { camera.setDisplayOrientation(rotation) } catch (_: Exception) {}
-        // 设置预览方向参数（影响帧数据和部分设备显示）
-        try { camera.parameters.rotation = rotation } catch (_: Exception) {}
     }
 
     private fun getRotationDegrees(camera: Camera): Int {
