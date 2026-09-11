@@ -35,12 +35,11 @@ class PersonDetector(private val context: Context) {
     private var faceDetector: com.google.mlkit.vision.face.FaceDetector? = null
     private var running = false
 
-    // 状态跟踪
-    private var lastTriggerTime = 0L
-    private val cooldownMs = 60000L  // 60秒冷却，避免重复问"有什么可以帮到你"
+    // 状态跟踪：只在"人离开→新人到来"时触发欢迎语，不重复发问
     private var consecutiveFramesWithoutFace = 0
     private val leaveThreshold = 10  // 连续 10 帧没人 → 触发 onPersonLeave
     private var wasFaceDetected = false
+    private var greetingTriggered = false  // 当前人员已发过欢迎语，离开后重置
 
     data class Callback(
         val onPersonEnter: () -> Unit,
@@ -206,23 +205,20 @@ class PersonDetector(private val context: Context) {
     private fun handleFaceResult(hasFace: Boolean) {
         callback?.onStatusChange?.invoke(hasFace)
 
-        val now = System.currentTimeMillis()
         if (hasFace) {
-            if (!wasFaceDetected || consecutiveFramesWithoutFace > 0) {
-                consecutiveFramesWithoutFace = 0
-            }
-            // 触发进入（冷却时间）
-            if (now - lastTriggerTime > cooldownMs) {
-                lastTriggerTime = now
+            consecutiveFramesWithoutFace = 0
+            // 只在"人离开后→新人到来"时触发欢迎语（greetingTriggered=false 表示需要发问）
+            if (!greetingTriggered) {
+                greetingTriggered = true
                 wasFaceDetected = true
                 callback?.onPersonEnter?.invoke()
             }
         } else {
             consecutiveFramesWithoutFace++
-            // 连续多帧没人 → 触发离开
+            // 连续多帧没人 → 触发离开，重置欢迎语状态
             if (consecutiveFramesWithoutFace >= leaveThreshold && wasFaceDetected) {
                 wasFaceDetected = false
-                lastTriggerTime = 0L
+                greetingTriggered = false  // 重置：下一个人来时可以再发欢迎语
                 callback?.onPersonLeave?.invoke()
             }
         }

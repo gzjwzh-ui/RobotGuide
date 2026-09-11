@@ -214,7 +214,8 @@
                         android:layout_marginTop="4dp"
                         android:background="@drawable/bg_input_field"
                         android:backgroundTint="@color/bg_input"
-                        android:padding="8dp" />
+                        android:padding="8dp"
+                        android:entries="@array/language_entries" />
 
                     <!-- 人体检测 -->
                     <com.google.android.material.switchmaterial.SwitchMaterial
@@ -224,6 +225,55 @@
                         android:text="人体检测自动问候"
                         android:textColor="@color/text_primary"
                         android:paddingTop="12dp" />
+
+                    <!-- TTS 音量调节 -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="对话音量调节"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="14sp"
+                        android:paddingTop="16dp" />
+
+                    <SeekBar
+                        android:id="@+id/sbTtsVolume"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:max="100"
+                        android:progress="80"
+                        android:progressTint="@color/colorPrimary" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="🔊 静音"
+                            android:textColor="@color/text_hint"
+                            android:textSize="12sp" />
+
+                        <TextView
+                            android:id="@+id/tvTtsVolumeValue"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:textColor="@color/colorAccent"
+                            android:textSize="16sp"
+                            android:text="80%" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="🔊 最大"
+                            android:textColor="@color/text_hint"
+                            android:textSize="12sp" />
+
+                    </LinearLayout>
 
                     <!-- 空闲超时 -->
                     <TextView

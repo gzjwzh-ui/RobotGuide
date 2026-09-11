@@ -25,30 +25,37 @@ class RobotTTS(private val context: Context) {
     private var ready = false
     private var pendingText: String? = null
     private var onDone: (() -> Unit)? = null
+    private var currentVolume = 1.0f  // 音量 0.0~1.0
 
     fun start(preferLang: String? = null) {
         Log.d(tag, "TTS start() called")
+        val settings = AppSettings(context)
+        currentVolume = settings.ttsVolume  // 读取音量设置
         tts = TextToSpeech(context.applicationContext) { status ->
             Log.d(tag, "TTS init status=$status")
             if (status == TextToSpeech.SUCCESS) {
                 ready = true
-                val lang = preferLang ?: AppSettings(context).getSpeechLang()
+                // 直接用 AppSettings 中的 robotLanguage，避免 getSpeechLang 不一致
+                val lang = preferLang ?: settings.robotLanguage
+                Log.d(tag, "TTS 使用语言代码: $lang")
                 val locale = parseLocale(lang)
                 val result = tts?.setLanguage(locale)
-                Log.d(tag, "TTS setLanguage($locale) result=$result")
+                Log.d(tag, "TTS setLanguage($locale) result=$result (0=LANG_AVAILABLE, -1=MISSING_DATA, -2=NOT_SUPPORTED)")
 
                 if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
-                    // 粤语不支持时，尝试台湾繁体中文
-                    val fallback1 = tts?.setLanguage(Locale.TRADITIONAL_CHINESE)
-                    Log.w(tag, "首选语言不支持，尝试繁体中文 result=$fallback1")
+                    // 首选语言不支持时尝试 fallback
+                    Log.w(tag, "首选语言($lang)不支持，尝试 fallback")
+                    // 先试简体中文
+                    val fallback1 = tts?.setLanguage(Locale.SIMPLIFIED_CHINESE)
+                    Log.w(tag, "尝试简体中文 result=$fallback1")
                     if (fallback1 == TextToSpeech.LANG_MISSING_DATA || fallback1 == TextToSpeech.LANG_NOT_SUPPORTED) {
-                        // 再尝试简体中文
-                        val fallback2 = tts?.setLanguage(Locale.SIMPLIFIED_CHINESE)
-                        Log.w(tag, "繁体不支持，尝试简体 result=$fallback2")
+                        // 再试繁体中文
+                        val fallback2 = tts?.setLanguage(Locale.TRADITIONAL_CHINESE)
+                        Log.w(tag, "尝试繁体中文 result=$fallback2")
                         if (fallback2 == TextToSpeech.LANG_MISSING_DATA || fallback2 == TextToSpeech.LANG_NOT_SUPPORTED) {
-                            // 最后尝试英文
+                            // 最后英文
                             val fallback3 = tts?.setLanguage(Locale.US)
-                            Log.w(tag, "中文都不支持，降级到英文 result=$fallback3")
+                            Log.w(tag, "降级到英文 result=$fallback3")
                         }
                     }
                 }
@@ -109,32 +116,46 @@ class RobotTTS(private val context: Context) {
         if (!ready) {
             Log.w(tag, "TTS 未就绪，暂存文本 (len=${text.length})")
             pendingText = text
-            // 尝试重新初始化
             if (tts == null) start()
             return
         }
 
         try {
             val params = Bundle()
-            params.putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, 1f)
+            params.putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, currentVolume)
             params.putFloat(TextToSpeech.Engine.KEY_PARAM_PAN, 0f)
 
-            // minSdk=23 >= LOLLIPOP(21)，直接用 4 参数版本
             val utteranceId = "robot_${System.currentTimeMillis()}"
             tts?.speak(text, TextToSpeech.QUEUE_FLUSH, params, utteranceId)
 
-            // 兜底：按字数估算时长，确保一定会触发 onDone
             val estimatedMs = (text.length * 200L).coerceAtLeast(2000L)
             mainHandler.removeCallbacksAndMessages(null)
             mainHandler.postDelayed({
                 onDone?.invoke()
             }, estimatedMs + 1000)
 
-            Log.d(tag, "🗣️ TTS speak() called, text='${text.take(30)}...', estimated=${estimatedMs}ms")
+            Log.d(tag, "🗣️ TTS speak() vol=$currentVolume, text='${text.take(30)}...', estimated=${estimatedMs}ms")
         } catch (e: Exception) {
             Log.e(tag, "❌ TTS speak 异常: ${e.message}", e)
             onDone?.invoke()
         }
+    }
+
+    /**
+     * 设置音量 (0.0 ~ 1.0)
+     */
+    fun setVolume(vol: Float) {
+        currentVolume = vol.coerceIn(0f, 1f)
+        Log.d(tag, "音量设置为: $currentVolume")
+    }
+
+    /**
+     * 重新应用语言设置（设置页面修改语言后调用）
+     */
+    fun reloadLanguage(lang: String) {
+        val locale = parseLocale(lang)
+        val result = tts?.setLanguage(locale)
+        Log.d(tag, "reloadLanguage($lang -> $locale) result=$result")
     }
 
     fun setLanguage(lang: String) {

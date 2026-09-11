@@ -50,6 +50,10 @@ class SettingsActivity : AppCompatActivity() {
         binding.swPersonDetection.isChecked = settings.personDetection
         binding.etIdleTimeout.setText(settings.idleTimeoutMin.toString())
 
+        // TTS 音量
+        binding.sbTtsVolume.progress = settings.ttsVolumeInt
+        binding.tvTtsVolumeValue.text = "${settings.ttsVolumeInt}%"
+
         // ===== AI =====
         binding.swUseAI.isChecked = settings.useAI
         binding.etApiKey.setText(settings.apiKey)
@@ -63,11 +67,19 @@ class SettingsActivity : AppCompatActivity() {
         binding.btnBack.setOnClickListener { finish() }
 
         binding.sbThreshold.setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: android.widget.SeekBar?, progress: Int, fromUser: Boolean) {
+            override fun onProgressChanged(seek: android.widget.SeekBar?, progress: Int, fromUser: Boolean) {
                 binding.tvThresholdValue.text = progress.toString()
             }
-            override fun onStartTrackingTouch(seekBar: android.widget.SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: android.widget.SeekBar?) {}
+            override fun onStartTrackingTouch(seek: android.widget.SeekBar?) {}
+            override fun onStopTrackingTouch(seek: android.widget.SeekBar?) {}
+        })
+
+        binding.sbTtsVolume.setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seek: android.widget.SeekBar?, progress: Int, fromUser: Boolean) {
+                binding.tvTtsVolumeValue.text = "$progress%"
+            }
+            override fun onStartTrackingTouch(seek: android.widget.SeekBar?) {}
+            override fun onStopTrackingTouch(seek: android.widget.SeekBar?) {}
         })
 
         binding.btnManageQA.setOnClickListener {
@@ -139,6 +151,7 @@ class SettingsActivity : AppCompatActivity() {
 
         settings.personDetection = binding.swPersonDetection.isChecked
         binding.etIdleTimeout.text.toString().toIntOrNull()?.let { settings.idleTimeoutMin = it }
+        settings.ttsVolumeInt = binding.sbTtsVolume.progress
 
         // ===== AI =====
         settings.useAI = binding.swUseAI.isChecked
@@ -148,6 +161,14 @@ class SettingsActivity : AppCompatActivity() {
         settings.matchThreshold = binding.sbThreshold.progress
 
         Toast.makeText(this, "设置已保存", Toast.LENGTH_SHORT).show()
+
+        // 通知主界面重新加载 TTS 语言和音量
+        val resultIntent = Intent().apply {
+            putExtra("settings_changed", true)
+            putExtra("language", settings.robotLanguage)
+            putExtra("volume", settings.ttsVolumeInt)
+        }
+        setResult(RESULT_OK, resultIntent)
 
         if (settings.useAI && settings.isAIConfigured()) {
             DoubaoClient(settings.apiKey, settings.modelId, settings.systemPrompt)

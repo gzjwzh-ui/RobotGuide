@@ -36,6 +36,7 @@ class AppSettings(context: Context) {
         const val KEY_SYSTEM_PROMPT = "system_prompt"
         const val KEY_MATCH_THRESHOLD = "match_threshold"
         const val KEY_AUTO_SHOW_MEDIA = "auto_show_media"
+        const val KEY_TTS_VOLUME = "tts_volume"       // TTS 音量 0~100
 
         // 默认值
         const val DEFAULT_BACKEND_URL = "http://192.168.0.251:5000"
@@ -45,6 +46,7 @@ class AppSettings(context: Context) {
         const val DEFAULT_GREETING = "您好！我是{robot_name}，有什么可以帮您的吗？"
         const val DEFAULT_PROMPT = "你是展厅讲解机器人，性格活泼友善，回答简洁不超过三句话，主动引导参观者了解展厅内容。"
         const val DEFAULT_THRESHOLD = 60
+        const val DEFAULT_TTS_VOLUME = 80  // 默认音量 80%
     }
 
     // ===== 后端 =====
@@ -110,6 +112,15 @@ class AppSettings(context: Context) {
     var autoShowMedia: Boolean
         get() = prefs.getBoolean(KEY_AUTO_SHOW_MEDIA, true)
         set(value) = prefs.edit().putBoolean(KEY_AUTO_SHOW_MEDIA, value).apply()
+
+    // ===== TTS 音量 (0~100, 内部转换为 0.0~1.0) =====
+    var ttsVolumeInt: Int
+        get() = prefs.getInt(KEY_TTS_VOLUME, DEFAULT_TTS_VOLUME)
+        set(value) = prefs.edit().putInt(KEY_TTS_VOLUME, value.coerceIn(0, 100)).apply()
+
+    /** TTS 音量浮点值 0.0~1.0（给 RobotTTS 用） */
+    val ttsVolume: Float
+        get() = ttsVolumeInt / 100f
 
     fun isAIConfigured(): Boolean {
         return apiKey.isNotBlank() && modelId.isNotBlank()

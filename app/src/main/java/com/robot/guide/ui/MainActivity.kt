@@ -167,8 +167,13 @@ class MainActivity : AppCompatActivity() {
                 binding.navHome.postDelayed({ switchNav(NAV_HOME) }, 200)
             }
             NAV_SETTINGS -> {
-                try { startActivity(Intent(this, SettingsActivity::class.java)) }
-                catch (e: Exception) { Toast.makeText(this, "打开设置失败", Toast.LENGTH_SHORT).show() }
+                try {
+                    val intent = Intent(this, SettingsActivity::class.java)
+                    @Suppress("DEPRECATION")
+                    startActivityForResult(intent, 1001)
+                } catch (e: Exception) {
+                    Toast.makeText(this, "打开设置失败", Toast.LENGTH_SHORT).show()
+                }
                 binding.navHome.postDelayed({ switchNav(NAV_HOME) }, 200)
             }
         }
@@ -351,6 +356,19 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    @Deprecated("Deprecated in Java")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == 1001 && resultCode == RESULT_OK && data != null) {
+            // 设置页面返回后，重新加载 TTS 语言和音量
+            val lang = data.getStringExtra("language") ?: settings.robotLanguage
+            val volume = data.getIntExtra("volume", settings.ttsVolumeInt)
+            tts?.reloadLanguage(lang)
+            tts?.setVolume(volume / 100f)
+            Toast.makeText(this, "语言和音量已更新", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     private fun initFeatures() {
         // 0. 启动硬件状态轮询（每 2 秒一次）
         startStatusPoll()
@@ -385,20 +403,18 @@ class MainActivity : AppCompatActivity() {
                             binding.tvDetectDetail.setTextColor(
                                 resources.getColor(R.color.success, theme))
 
-                            // TTS 欢迎语
+                            // TTS 欢迎语（只在人离开后→新人到来时说一次）
                             val greeting = settings.greeting.ifBlank {
-                                "有什么可以帮到你，我是${settings.robotName}"
+                                "您好，我是${settings.robotName}"
                             }
                             speechRecognizer.pauseForSpeech()
                             tts?.speak(greeting, onDone = {
                                 speechRecognizer.resumeAfterSpeech()
-                                // 欢迎语说完后自动启动语音识别
                                 startAutoListening()
                             })
 
-                            // 打招呼动作：活动筋骨 + 头部手臂复位
+                            // 打招呼动作
                             actionController.execute(RobotActionController.Action.COMBO_STRETCH)
-                            actionController.execute(RobotActionController.Action.HEAD_RESET_ALL)
 
                             // 对话区显示欢迎
                             chatAdapter.addMessage(ChatMessage(
