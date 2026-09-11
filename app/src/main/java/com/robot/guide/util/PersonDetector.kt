@@ -258,10 +258,12 @@ class PersonDetector(private val context: Context) {
     private fun setCameraDisplayOrientation(cameraId: Int, camera: Camera) {
         val info = Camera.CameraInfo()
         Camera.getCameraInfo(cameraId, info)
-        // 向左转90度修正方向：原值基础上逆时针90度（即+270等价于-90）
+        // 向左转90度：在原 orientation 基础上逆时针旋转90度
+        // 后置摄像头：(orientation + 90) % 360
+        // 前置摄像头：(orientation + 90 + 180) % 360 （前置需额外镜像翻转）
         val rotation = when {
-            (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) -> (info.orientation + 180) % 360
-            else -> (info.orientation + 0) % 360
+            (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) -> (info.orientation + 270) % 360
+            else -> (info.orientation + 90) % 360
         }
         try { camera.setDisplayOrientation(rotation) } catch (_: Exception) {}
     }

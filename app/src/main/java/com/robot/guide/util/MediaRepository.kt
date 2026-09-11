@@ -157,9 +157,10 @@ class MediaRepository(context: Context) {
         val arr = JSONArray(body)
         return (0 until arr.length()).map { i ->
             val obj = arr.getJSONObject(i)
+            val rawUrl = obj.optString("url").ifBlank { obj.optString("stored_path") }
             MediaFile(
                 id = obj.optString("id"),
-                path = absolutePath(obj.optString("url")),
+                path = absolutePath(rawUrl),
                 name = obj.optString("name"),
                 type = MediaFile.Type.VIDEO
             )

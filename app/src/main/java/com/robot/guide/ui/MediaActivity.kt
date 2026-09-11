@@ -156,6 +156,10 @@ class MediaActivity : AppCompatActivity() {
             val v = videos[position]
             holder.tv.text = v.name
             holder.itemView.setOnClickListener {
+                if (v.path.isBlank()) {
+                    Toast.makeText(this@MediaActivity, "视频路径无效", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
                 playVideo(v.path, v.name)
             }
         }
@@ -168,7 +172,6 @@ class MediaActivity : AppCompatActivity() {
             binding.rvContent.visibility = View.GONE
             binding.tabLayout.visibility = View.GONE
 
-            videoView.setVideoPath(url)
             videoView.setOnPreparedListener { mp ->
                 mp.isLooping = false
                 videoView.start()
@@ -177,7 +180,7 @@ class MediaActivity : AppCompatActivity() {
                 Toast.makeText(this, "播放完成: $name", Toast.LENGTH_SHORT).show()
             }
             videoView.setOnErrorListener { _, what, extra ->
-                Toast.makeText(this, "视频播放失败 (错误码: $what/$extra)", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "视频播放失败 (错误码: $what/$extra)", Toast.LENGTH_LONG).show()
                 binding.videoContainer.visibility = View.GONE
                 binding.rvContent.visibility = View.VISIBLE
                 binding.tabLayout.visibility = View.VISIBLE
@@ -186,15 +189,29 @@ class MediaActivity : AppCompatActivity() {
 
             // 返回按钮
             binding.btnVideoBack.setOnClickListener {
-                videoView.stopPlayback()
+                try { videoView.stopPlayback() } catch (_: Exception) {}
                 binding.videoContainer.visibility = View.GONE
                 binding.rvContent.visibility = View.VISIBLE
                 binding.tabLayout.visibility = View.VISIBLE
             }
 
+            // 用 setVideoURI 替代 setVideoPath，更稳定地处理 http URL
+            try {
+                videoView.setVideoURI(android.net.Uri.parse(url))
+            } catch (e: Exception) {
+                Toast.makeText(this, "视频地址无效: $url", Toast.LENGTH_LONG).show()
+                binding.videoContainer.visibility = View.GONE
+                binding.rvContent.visibility = View.VISIBLE
+                binding.tabLayout.visibility = View.VISIBLE
+                return
+            }
+
             Toast.makeText(this, "正在播放: $name", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
-            Toast.makeText(this, "播放失败: ${e.message}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "播放失败: ${e.message}", Toast.LENGTH_LONG).show()
+            binding.videoContainer.visibility = View.GONE
+            binding.rvContent.visibility = View.VISIBLE
+            binding.tabLayout.visibility = View.VISIBLE
         }
     }
 }

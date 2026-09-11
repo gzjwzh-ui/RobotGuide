@@ -182,22 +182,8 @@ class MainActivity : AppCompatActivity() {
     // ========== 顶部标题栏 ==========
 
     private fun setupTitleBar() {
-        val languages = listOf("zh-CN 普通话", "yue-HK 粤语", "en-US English")
-        val langCodes = listOf("zh-CN", "yue-HK", "en-US")
-        var langIdx = langCodes.indexOf(settings.robotLanguage).coerceAtLeast(0)
-
-        binding.btnLanguage.text = languages[langIdx].substringAfter(" ")
-
-        binding.btnLanguage.setOnClickListener {
-            langIdx = (langIdx + 1) % languages.size
-            settings.robotLanguage = langCodes[langIdx]
-            binding.btnLanguage.text = languages[langIdx].substringAfter(" ")
-            tts?.setLanguage(langCodes[langIdx])
-        }
-
-        binding.btnMenu.setOnClickListener {
-            Toast.makeText(this, "菜单", Toast.LENGTH_SHORT).show()
-        }
+        // 语言按钮和三点菜单已移除，只保留普通话
+        // 语言由后台同步控制，APP 端不再切换
     }
 
     // ========== 快捷问题 ==========
@@ -384,11 +370,7 @@ class MainActivity : AppCompatActivity() {
                         // 同步成功后重新加载 TTS 语言（后台可能改了语言设置）
                         val syncedLang = settings.robotLanguage
                         tts?.reloadLanguage(syncedLang)
-                        // 更新标题栏语言按钮显示
-                        val languages = listOf("zh-CN 普通话", "yue-HK 粤语", "en-US English")
-                        val langCodes = listOf("zh-CN", "yue-HK", "en-US")
-                        val langIdx = langCodes.indexOf(syncedLang).coerceAtLeast(0)
-                        binding.btnLanguage.text = languages[langIdx].substringAfter(" ")
+                        // 更新机器人名字
                         binding.tvRobotName.text = settings.robotName
                         Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
                     }

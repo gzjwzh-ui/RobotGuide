@@ -280,36 +280,6 @@
 
             </LinearLayout>
 
-            <!-- 语言切换 -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnLanguage"
-                style="@style/ButtonIcon"
-                android:layout_width="wrap_content"
-                android:layout_height="46dp"
-                android:layout_marginStart="12dp"
-                android:text="🇭🇰 HK 粤语"
-                android:textSize="15sp"
-                app:cornerRadius="23dp"
-                app:backgroundTint="@color/bg_card"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
-                android:insetLeft="14dp"
-                android:insetRight="14dp"
-                android:textColor="@color/text_primary" />
-
-            <!-- 三点菜单 -->
-            <TextView
-                android:id="@+id/btnMenu"
-                android:layout_width="46dp"
-                android:layout_height="46dp"
-                android:layout_marginStart="8dp"
-                android:background="@drawable/bg_card"
-                android:gravity="center"
-                android:text="⋮"
-                android:textColor="@color/text_primary"
-                android:textSize="26sp"
-                android:textStyle="bold" />
-
         </LinearLayout>
 
         <!-- 对话列表 -->

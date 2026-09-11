@@ -2,7 +2,5 @@
 <resources>
     <string-array name="language_entries">
         <item>🇨🇳 普通话 (zh-CN)</item>
-        <item>🇭🇰 粤语 (yue-HK)</item>
-        <item>🇬🇧 英语 (en-US)</item>
     </string-array>
 </resources>

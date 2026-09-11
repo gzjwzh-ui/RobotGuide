@@ -64,6 +64,7 @@
   <div class="flex gap-1 border-b border-slate-700 mb-6 overflow-x-auto">
     <div class="tab active" data-tab="libs" onclick="switchTab('libs')">📚 题库 & 问答</div>
     <div class="tab" data-tab="vehicles" onclick="switchTab('vehicles')">🚗 车辆管理</div>
+    <div class="tab" data-tab="videos" onclick="switchTab('videos')">🎬 视频管理</div>
     <div class="tab" data-tab="voice" onclick="switchTab('voice')">🔊 语音测试</div>
     <div class="tab" data-tab="config" onclick="switchTab('config')">⚙️ 机器人设置</div>
     <div class="tab" data-tab="api" onclick="switchTab('api')">🔗 AI参数</div>
@@ -160,11 +161,46 @@
     </div>
   </div>
 
+  <!-- ============ 视频管理 ============ -->
+  <div id="tab-videos" class="tab-content hidden">
+    <div class="card p-6 space-y-5">
+      <h2 class="text-lg font-semibold text-white">🎬 视频管理</h2>
+      <p class="text-slate-400 text-sm">上传视频文件，APP 端"车辆视频"页面会自动显示这些视频。</p>
+
+      <!-- 上传表单 -->
+      <div class="border border-slate-700 rounded-lg p-4 space-y-3">
+        <h3 class="text-white font-semibold">📤 上传新视频</h3>
+        <div>
+          <label class="text-sm text-slate-400 block mb-1">视频名称</label>
+          <input class="input" id="videoName" placeholder="例如：品牌宣传片">
+        </div>
+        <div>
+          <label class="text-sm text-slate-400 block mb-1">视频简介（可选）</label>
+          <input class="input" id="videoDesc" placeholder="视频描述...">
+        </div>
+        <div>
+          <label class="text-sm text-slate-400 block mb-1">选择视频文件（MP4/MOV）</label>
+          <input type="file" id="videoFile" accept="video/*" class="block w-full text-slate-300">
+        </div>
+        <button class="btn btn-primary" onclick="uploadVideo()">📤 上传视频</button>
+      </div>
+
+      <!-- 视频列表 -->
+      <div class="border border-slate-700 rounded-lg p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="text-white font-semibold">📋 已上传视频</h3>
+          <button class="btn btn-secondary text-sm" onclick="loadVideos()">🔄 刷新</button>
+        </div>
+        <div id="videoList" class="space-y-2"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- ============ 语音测试 ============ -->
   <div id="tab-voice" class="tab-content hidden">
     <div class="card p-6 space-y-5">
-      <h2 class="text-lg font-semibold text-white">🔊 三语语音合成测试</h2>
-      <p class="text-slate-400 text-sm">支持 普通话 / 粤语 / 英文。后端使用微软 edge-tts 引擎（免费高质量）。</p>
+      <h2 class="text-lg font-semibold text-white">🔊 语音合成测试</h2>
+      <p class="text-slate-400 text-sm">后端使用微软 edge-tts 引擎（免费高质量）。</p>
 
       <div id="ttsStatus" class="text-sm"></div>
 
@@ -237,8 +273,6 @@
           <label class="text-sm text-slate-400 block mb-1">机器人语言</label>
           <select class="input" id="cfg_language">
             <option value="zh-CN">🇨🇳 普通话 (zh-CN)</option>
-            <option value="yue-HK">🇭🇰 粤语 (yue-HK)</option>
-            <option value="en-US">🇬🇧 英语 (en-US)</option>
           </select>
         </div>
       </div>
@@ -396,13 +430,81 @@ let selectedLibId = null;
 // ========= 初始化 =========
 async function init() {
   // 每个加载独立处理错误，避免一个失败导致全部不可用
-  const results = await Promise.allSettled([loadLibs(), loadQA(), loadConfig(), loadVoices()]);
+  const results = await Promise.allSettled([loadLibs(), loadQA(), loadConfig(), loadVoices(), loadVideos()]);
   const allOk = results.every(r => r.status === "fulfilled");
   if (allOk) {
     setStatus("✅ 已连接", true);
   } else {
     const failed = results.filter(r => r.status === "rejected").length;
     setStatus(`⚠️ ${failed} 个接口异常，配置保存仍可使用`, true);
+  }
+}
+
+// ========= 视频管理 =========
+async function loadVideos() {
+  try {
+    const r = await fetch(API + "/api/videos");
+    if (!r.ok) { document.getElementById("videoList").innerHTML = "<p class='text-red-400'>加载失败</p>"; return; }
+    const list = await r.json();
+    const el = document.getElementById("videoList");
+    if (!list || list.length === 0) {
+      el.innerHTML = "<p class='text-slate-400 text-sm'>暂无视频，请上传</p>";
+      return;
+    }
+    el.innerHTML = list.map(v => `
+      <div class="flex items-center justify-between bg-slate-800/50 rounded p-3">
+        <div class="flex-1">
+          <div class="text-white font-medium">${escapeHtml(v.name)}</div>
+          <div class="text-slate-400 text-xs">${v.description || ''}</div>
+          <div class="text-slate-500 text-xs">${v.filename || ''}</div>
+        </div>
+        <div class="flex gap-2">
+          <a href="${API}${v.stored_path}" target="_blank" class="btn btn-secondary text-sm">▶ 播放</a>
+          <button class="btn bg-red-600 text-white text-sm" onclick="deleteVideo(${v.id})">🗑 删除</button>
+        </div>
+      </div>
+    `).join("");
+  } catch(e) {
+    document.getElementById("videoList").innerHTML = "<p class='text-red-400'>加载失败：" + e.message + "</p>";
+  }
+}
+
+async function uploadVideo() {
+  const name = document.getElementById("videoName").value.trim();
+  const desc = document.getElementById("videoDesc").value.trim();
+  const fileInput = document.getElementById("videoFile");
+  if (!fileInput.files || !fileInput.files[0]) {
+    toast("请选择视频文件", false); return;
+  }
+  const fd = new FormData();
+  fd.append("name", name || fileInput.files[0].name);
+  fd.append("description", desc);
+  fd.append("file", fileInput.files[0]);
+  try {
+    toast("⏫ 上传中...");
+    const r = await fetch(API + "/api/videos/upload", {method:"POST", body: fd});
+    if (r.ok) {
+      toast("✅ 上传成功");
+      document.getElementById("videoName").value = "";
+      document.getElementById("videoDesc").value = "";
+      document.getElementById("videoFile").value = "";
+      loadVideos();
+    } else {
+      toast("❌ 上传失败 (HTTP " + r.status + ")", false);
+    }
+  } catch(e) {
+    toast("❌ 上传失败：" + e.message, false);
+  }
+}
+
+async function deleteVideo(id) {
+  if (!confirm("确定删除此视频？")) return;
+  try {
+    const r = await fetch(API + "/api/videos/" + id, {method:"DELETE"});
+    if (r.ok) { toast("✅ 已删除"); loadVideos(); }
+    else toast("❌ 删除失败", false);
+  } catch(e) {
+    toast("❌ 删除失败：" + e.message, false);
   }
 }
 let currentVoiceLang = "zh-CN";
@@ -514,6 +616,7 @@ function switchTab(name) {
   document.querySelectorAll(".tab-content").forEach(c => c.classList.add("hidden"));
   document.getElementById("tab-" + name).classList.remove("hidden");
   if (name === "vehicles") loadVehicles();
+  if (name === "videos") loadVideos();
 }
 
 // ========= 题库 =========

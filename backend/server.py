@@ -99,6 +99,16 @@ def init_db():
         sort_order INTEGER DEFAULT 0,
         created_at INTEGER)""")
 
+    # ===== 新增: 视频表 =====
+    c.execute("""CREATE TABLE IF NOT EXISTS videos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,           -- 视频名称
+        filename TEXT NOT NULL,       -- 原始文件名
+        stored_path TEXT NOT NULL,    -- /uploads/uuid.mp4
+        description TEXT DEFAULT '',  -- 视频简介
+        sort_order INTEGER DEFAULT 0,
+        created_at INTEGER)""")
+
     # 默认数据
     if c.execute("SELECT COUNT(*) FROM qa_libraries").fetchone()[0] == 0:
         c.execute("INSERT INTO qa_libraries(name,description,is_default,language,created_at) VALUES(?,?,?,?,?)",
@@ -145,8 +155,8 @@ def init_db():
     for k, v in defaults.items():
         c.execute("INSERT OR IGNORE INTO robot_config(key,value) VALUES(?,?)", (k, v))
 
-    # 修复旧库中可能存在的 "auto" 语言值 → "zh-CN"
-    c.execute("UPDATE robot_config SET value='zh-CN' WHERE key='language' AND value='auto'")
+    # 修复旧库中可能存在的非普通话语言值 → "zh-CN"
+    c.execute("UPDATE robot_config SET value='zh-CN' WHERE key='language' AND value IN ('auto','yue-HK','en-US')")
 
     db.commit()
     db.close()
@@ -348,6 +358,18 @@ class Handler(BaseHTTPRequestHandler):
                 db.close()
                 self.send_json([dict(r) for r in rows]); return
 
+        # === 视频 API ===
+        if path == "/api/videos":
+            db = get_db()
+            rows = db.execute("SELECT * FROM videos ORDER BY sort_order ASC, id ASC").fetchall()
+            result = []
+            for r in rows:
+                vd = dict(r)
+                vd["url"] = vd["stored_path"]
+                result.append(vd)
+            db.close()
+            self.send_json(result); return
+
         # === QA API ===
         if path == "/api/libraries":
             db = get_db()
@@ -495,6 +517,48 @@ class Handler(BaseHTTPRequestHandler):
                         db.execute("UPDATE vehicles SET thumbnail=? WHERE id=?", (f"/uploads/{new_name}", int(vid)))
             db.commit(); db.close()
             self.send_json({"ok": True}); return
+
+        # === 视频上传 (multipart/form-data) ===
+        if path == "/api/videos/upload":
+            ct = self.headers.get("Content-Type", "")
+            if "multipart/form-data" not in ct:
+                self.send_json({"error":"need multipart"}, 400); return
+            boundary = ct.split("boundary=")[-1].encode()
+            length = int(self.headers.get("Content-Length", 0))
+            raw = self.rfile.read(length)
+            parts = raw.split(b"--" + boundary)
+            video_name = ""
+            description = ""
+            uploaded_file = None
+            for part in parts:
+                if not part.strip() or b"--" in part[:20]: continue
+                header_end = part.find(b"\r\n\r\n")
+                if header_end < 0: continue
+                headers = part[:header_end].decode(errors="ignore")
+                fm = re.search(r'name="([^"]*)"', headers)
+                field_name = fm.group(1) if fm else ""
+                body = part[header_end+4:]
+                if body.endswith(b"\r\n"): body = body[:-2]
+                if field_name == "name":
+                    video_name = body.decode().strip()
+                elif field_name == "description":
+                    description = body.decode().strip()
+                elif field_name == "file":
+                    m = re.search(r'filename="([^"]*)"', headers)
+                    orig_name = m.group(1) if m else "video.mp4"
+                    ext = os.path.splitext(orig_name)[1] or ".mp4"
+                    new_name = f"{uuid.uuid4().hex[:16]}{ext}"
+                    fpath = os.path.join(UPLOAD_DIR, new_name)
+                    with open(fpath, "wb") as f: f.write(body)
+                    uploaded_file = {"original": orig_name, "stored": f"/uploads/{new_name}"}
+            if not uploaded_file:
+                self.send_json({"error":"no file"}, 400); return
+            if not video_name: video_name = uploaded_file["original"]
+            db = get_db()
+            cur = db.execute("INSERT INTO videos(name,filename,stored_path,description,sort_order,created_at) VALUES(?,?,?,?,?,?)",
+                (video_name, uploaded_file["original"], uploaded_file["stored"], description, 0, int(time.time())))
+            db.commit(); db.close()
+            self.send_json({"id": cur.lastrowid, "ok": True}); return
 
         data = self.read_body()
 
@@ -671,6 +735,20 @@ class Handler(BaseHTTPRequestHandler):
                     fpath = os.path.join(UPLOAD_DIR, fname)
                     if os.path.isfile(fpath): os.unlink(fpath)
                 db.execute("DELETE FROM vehicle_images WHERE id=?", (int(iid),))
+                db.commit(); db.close()
+                self.send_json({"ok": True}); return
+
+        # 删除视频
+        if path.startswith("/api/videos/"):
+            vid = path.split("/")[-1]
+            if vid.isdigit():
+                db = get_db()
+                row = db.execute("SELECT stored_path FROM videos WHERE id=?", (int(vid),)).fetchone()
+                if row:
+                    fname = row["stored_path"].split("/uploads/")[-1]
+                    fpath = os.path.join(UPLOAD_DIR, fname)
+                    if os.path.isfile(fpath): os.unlink(fpath)
+                db.execute("DELETE FROM videos WHERE id=?", (int(vid),))
                 db.commit(); db.close()
                 self.send_json({"ok": True}); return
 
