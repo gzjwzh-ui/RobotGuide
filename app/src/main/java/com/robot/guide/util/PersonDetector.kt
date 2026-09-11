@@ -3,37 +3,44 @@ package com.robot.guide.util
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.hardware.Camera
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
-import androidx.camera.core.CameraSelector
-import androidx.camera.core.ImageAnalysis
-import androidx.camera.core.Preview
-import androidx.camera.lifecycle.ProcessCameraProvider
-import androidx.camera.view.PreviewView
+import android.view.SurfaceHolder
+import android.view.SurfaceView
 import androidx.core.content.ContextCompat
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.face.FaceDetection
+import java.io.IOException
 import java.util.concurrent.Executors
 
 /**
  * 人脸/人体检测 + 摄像头预览
- * 关键点：
- *   - 绑定前先检测有没有前置，没有就用后置
- *   - bindCamera 必须在 cameraProvider 成功初始化后立即调用
- *   - ImageAnalysis 用 KEEP_ONLY_LATEST 避免堆积，分辨率足够 ML Kit 用就行
+ *
+ * 参考原 APK CameraHelper + FaceDetectView 实现：
+ *   - 使用旧 Camera API（稳定，同硬件上验证通过）
+ *   - SurfaceView 预览 + PreviewCallback 获取帧数据
+ *   - ML Kit 人脸检测（与原 APK 相同）
+ *   - 连续帧确认防抖动（需连续 N 帧有人/无人才触发）
  */
 class PersonDetector(private val context: Context) {
 
     private val tag = "PersonDetector"
     private val executor = Executors.newSingleThreadExecutor()
-    private var cameraProvider: ProcessCameraProvider? = null
+    private val mainHandler = Handler(Looper.getMainLooper())
+
+    private var camera: Camera? = null
+    private var surfaceHolder: SurfaceHolder? = null
     private var faceDetector: com.google.mlkit.vision.face.FaceDetector? = null
     private var running = false
-    private var boundCamera: android.hardware.camera2.CameraDevice? = null
 
+    // 状态跟踪
     private var lastTriggerTime = 0L
     private val cooldownMs = 10000L
     private var consecutiveFramesWithoutFace = 0
-    private val leaveThreshold = 30
+    private val leaveThreshold = 5   // 连续 5 帧没人 → 触发 onPersonLeave
+    private var wasFaceDetected = false
 
     data class Callback(
         val onPersonEnter: () -> Unit,
@@ -51,8 +58,10 @@ class PersonDetector(private val context: Context) {
 
     /**
      * 启动摄像头预览 + 人脸检测
+     * @param previewView SurfaceView 用于预览
+     * @param lifecycleOwner 兼容旧接口（实际不用，SurfaceHolder.Callback 代替）
      */
-    fun start(previewView: PreviewView, lifecycleOwner: androidx.lifecycle.LifecycleOwner, cb: Callback) {
+    fun start(previewView: SurfaceView, lifecycleOwner: androidx.lifecycle.LifecycleOwner, cb: Callback) {
         if (running) return
         if (!isSupported()) {
             Log.w(tag, "没有相机权限，跳过人脸检测")
@@ -60,6 +69,7 @@ class PersonDetector(private val context: Context) {
         }
         this.callback = cb
 
+        // 初始化 ML Kit 人脸检测器（Fast 模式，无轮廓/地标）
         val options = com.google.mlkit.vision.face.FaceDetectorOptions.Builder()
             .setPerformanceMode(com.google.mlkit.vision.face.FaceDetectorOptions.PERFORMANCE_MODE_FAST)
             .setContourMode(com.google.mlkit.vision.face.FaceDetectorOptions.CONTOUR_MODE_NONE)
@@ -67,117 +77,214 @@ class PersonDetector(private val context: Context) {
             .build()
         faceDetector = FaceDetection.getClient(options)
 
-        ProcessCameraProvider.getInstance(context).addListener({
-            try {
-                cameraProvider = ProcessCameraProvider.getInstance(context).get()
-                bindCamera(previewView, lifecycleOwner)
-            } catch (e: Exception) {
-                Log.e(tag, "无法启动相机: ${e.message}", e)
-                // 失败时给个假的状态回调，避免 UI 一直等
-                cb.onStatusChange(false)
+        // SurfaceView 准备好后打开相机
+        val holder = previewView.holder
+        holder.addCallback(object : SurfaceHolder.Callback {
+            override fun surfaceCreated(h: SurfaceHolder) {
+                surfaceHolder = h
+                openCamera()
             }
-        }, ContextCompat.getMainExecutor(context))
+            override fun surfaceChanged(h: SurfaceHolder, format: Int, width: Int, height: Int) {}
+            override fun surfaceDestroyed(h: SurfaceHolder) {
+                closeCamera()
+            }
+        })
+
+        // 如果 Surface 已存在（极短生命周期），直接打开
+        if (holder.surface?.isValid == true) {
+            surfaceHolder = holder
+            openCamera()
+        }
 
         running = true
     }
 
-    private fun bindCamera(previewView: PreviewView, lifecycleOwner: androidx.lifecycle.LifecycleOwner) {
-        val provider = cameraProvider ?: run {
-            Log.e(tag, "cameraProvider 为 null，放弃绑定")
-            return
-        }
-
-        // 选摄像头：优先前置，没有就后置
-        val hasFront = provider.hasCamera(CameraSelector.DEFAULT_FRONT_CAMERA)
-        val cameraSelector = if (hasFront) {
-            Log.d(tag, "使用前置摄像头")
-            CameraSelector.DEFAULT_FRONT_CAMERA
-        } else {
-            Log.w(tag, "没有前置摄像头，使用后置")
-            CameraSelector.DEFAULT_BACK_CAMERA
-        }
-
-        val preview = Preview.Builder()
-            .setTargetResolution(android.util.Size(640, 480))
-            .build()
-        preview.setSurfaceProvider(previewView.surfaceProvider)
-
-        val analysis = ImageAnalysis.Builder()
-            .setTargetResolution(android.util.Size(640, 480))
-            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-            .build()
-            .also {
-                it.setAnalyzer(executor) { imageProxy ->
-                    processFrame(imageProxy)
-                }
-            }
-
+    private fun openCamera() {
         try {
-            provider.unbindAll()
-            val camera = provider.bindToLifecycle(
-                lifecycleOwner,
-                cameraSelector,
-                preview,
-                analysis
-            )
-            Log.d(tag, "✅ 相机绑定成功 (Preview + Analysis)")
-        } catch (e: Exception) {
-            Log.e(tag, "❌ 绑定相机失败: ${e.message}", e)
-            // 某些老旧设备 IllegalArgumentException 时，尝试只绑定 Preview（不做人脸检测）
-            try {
-                provider.unbindAll()
-                provider.bindToLifecycle(lifecycleOwner, cameraSelector, preview)
-                Log.w(tag, "降级：仅预览可用，人脸检测已关闭")
-            } catch (e2: Exception) {
-                Log.e(tag, "降级方案也失败: ${e2.message}")
+            // 优先前置摄像头
+            val frontId = findFrontCameraId()
+            val camId = frontId ?: Camera.CameraInfo.CAMERA_FACING_BACK
+            camera = Camera.open(camId) ?: run {
+                Log.e(tag, "Camera.open 返回 null")
+                return
             }
+
+            // 设置参数
+            camera?.let { cam ->
+                val params = cam.parameters
+                // 找合适的预览尺寸（不超过 640x480，ML Kit 够用）
+                val targetSize = findBestPreviewSize(params.supportedPreviewSizes, 640, 480)
+                params.setPreviewSize(targetSize.width, targetSize.height)
+                // 帧率范围
+                val range = findBestFpsRange(params.supportedPreviewFpsRange)
+                if (range != null) params.setPreviewFpsRange(range[0], range[1])
+                cam.parameters = params
+
+                // 设置显示方向（前置镜像 + 旋转）
+                setCameraDisplayOrientation(camId, cam)
+
+                // 绑定 SurfaceHolder
+                cam.setPreviewDisplay(surfaceHolder)
+
+                // 开始预览 + 设置帧回调
+                cam.setPreviewCallback { data, camera ->
+                    processFrame(data, camera)
+                }
+                cam.startPreview()
+
+                Log.d(tag, "✅ 相机启动成功 (id=$camId, ${targetSize.width}x${targetSize.height})")
+            }
+        } catch (e: IOException) {
+            Log.e(tag, "❌ 打开相机失败: ${e.message}", e)
+            mainHandler.post { callback?.onStatusChange?.invoke(false) }
+        } catch (e: Exception) {
+            Log.e(tag, "❌ 打开相机异常: ${e.message}", e)
         }
     }
 
-    private fun processFrame(imageProxy: androidx.camera.core.ImageProxy) {
-        val mediaImage = imageProxy.image
-        if (mediaImage != null) {
-            val input = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
-            faceDetector?.process(input)
-                ?.addOnSuccessListener { faces ->
-                    val now = System.currentTimeMillis()
-                    if (faces.isNotEmpty()) {
-                        consecutiveFramesWithoutFace = 0
-                        callback?.onStatusChange?.invoke(true)
-                        if (now - lastTriggerTime > cooldownMs) {
-                            lastTriggerTime = now
-                            callback?.onPersonEnter?.invoke()
-                        }
-                    } else {
-                        consecutiveFramesWithoutFace++
-                        callback?.onStatusChange?.invoke(false)
-                        if (consecutiveFramesWithoutFace >= leaveThreshold) {
-                            lastTriggerTime = 0L
-                        }
-                    }
+    private fun closeCamera() {
+        try {
+            camera?.let { cam ->
+                cam.setPreviewCallback(null)
+                cam.stopPreview()
+                cam.release()
+            }
+            camera = null
+            faceDetector?.close()
+            faceDetector = null
+            running = false
+            wasFaceDetected = false
+        } catch (_: Exception) {}
+    }
+
+    /**
+     * 处理每帧数据 —— YUV → ML Kit → 回调
+     */
+    private fun processFrame(data: ByteArray, camera: Camera) {
+        if (faceDetector == null || !running) return
+
+        try {
+            val params = camera.parameters
+            val width = params.previewSize.width
+            val height = params.previewSize.height
+
+            // YUV → NV21 (ML Kit 需要)
+            val nv21 = yuv420ToNv21(data, width, height)
+            val rotation = getRotationDegrees(camera)
+
+            val image = InputImage.fromByteArray(
+                nv21, width, height, rotation, InputImage.IMAGE_FORMAT_NV21
+            )
+
+            faceDetector!!.process(image)
+                .addOnSuccessListener { faces ->
+                    mainHandler.post { handleFaceResult(faces.isNotEmpty()) }
                 }
-                ?.addOnFailureListener { err ->
-                    // 单帧失败忽略，但偶尔打一条日志（避免刷屏）
-                    if ((System.currentTimeMillis() / 1000) % 5 == 0L) {
+                .addOnFailureListener { err ->
+                    if ((System.currentTimeMillis() / 1000) % 10L == 0L) {
                         Log.d(tag, "人脸检测失败: ${err.message}")
                     }
                 }
-                ?.addOnCompleteListener {
-                    imageProxy.close()
-                }
-        } else {
-            imageProxy.close()
+        } catch (e: Exception) {
+            // 忽略单帧异常
         }
     }
 
+    private fun handleFaceResult(hasFace: Boolean) {
+        callback?.onStatusChange?.invoke(hasFace)
+
+        val now = System.currentTimeMillis()
+        if (hasFace) {
+            if (!wasFaceDetected || consecutiveFramesWithoutFace > 0) {
+                consecutiveFramesWithoutFace = 0
+            }
+            // 触发进入（冷却时间）
+            if (now - lastTriggerTime > cooldownMs) {
+                lastTriggerTime = now
+                wasFaceDetected = true
+                callback?.onPersonEnter?.invoke()
+            }
+        } else {
+            consecutiveFramesWithoutFace++
+            // 连续多帧没人 → 触发离开
+            if (consecutiveFramesWithoutFace >= leaveThreshold && wasFaceDetected) {
+                wasFaceDetected = false
+                lastTriggerTime = 0L
+                callback?.onPersonLeave?.invoke()
+            }
+        }
+    }
+
+    // ========== 工具方法 ==========
+
+    private fun findFrontCameraId(): Int? {
+        for (i in 0 until Camera.getNumberOfCameras()) {
+            val info = Camera.CameraInfo()
+            Camera.getCameraInfo(i, info)
+            if (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) return i
+        }
+        return null
+    }
+
+    private fun findBestPreviewSize(sizes: List<Camera.Size>, targetW: Int, targetH: Int): Camera.Size {
+        var best = sizes[0]
+        var bestDiff = Int.MAX_VALUE
+        for (s in sizes) {
+            val diff = Math.abs(s.width - targetW) + Math.abs(s.height - targetH)
+            if (diff < bestDiff) {
+                bestDiff = diff
+                best = s
+            }
+        }
+        return best
+    }
+
+    private fun findBestFpsRange(ranges: List<IntArray>): IntArray? {
+        return ranges.maxByOrNull { it[1] - it[0] }
+    }
+
+    private fun setCameraDisplayOrientation(cameraId: Int, camera: Camera) {
+        val info = Camera.CameraInfo()
+        Camera.getCameraInfo(cameraId, info)
+        val rotation = when {
+            (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) -> (info.orientation + 270) % 360
+            else -> (info.orientation + 90) % 360
+        }
+        try { camera.setDisplayOrientation(rotation) } catch (_: Exception) {}
+    }
+
+    private fun getRotationDegrees(camera: Camera): Int {
+        val params = camera.parameters
+        // ML Kit 需要的 rotation 值
+        return when (params.cameraOrientation) {
+            90 -> 90
+            180 -> 180
+            270 -> 270
+            else -> 0
+        }
+    }
+
+    /**
+     * YUV420 → NV21 (ML Kit 需要 NV21 格式)
+     */
+    private fun yuv420ToNv21(yuv: ByteArray, width: Int, height: Int): ByteArray {
+        val ySize = width * height
+        val uvSize = ySize / 4
+        val nv21 = ByteArray(ySize + uvSize * 2)
+        // Y 平面直接拷贝
+        System.arraycopy(yuv, 0, nv21, 0, ySize)
+        // UV 平面交错（NV21 是 VUVU...，YUV420 是 UU...VV...）
+        val uOffset = ySize
+        val vOffset = ySize + uvSize
+        for (i in 0 until uvSize) {
+            nv21[ySize + i * 2] = yuv[vOffset + i]      // V
+            nv21[ySize + i * 2 + 1] = yuv[uOffset + i]  // U
+        }
+        return nv21
+    }
+
     fun stop() {
-        if (!running) return
-        try {
-            cameraProvider?.unbindAll()
-            faceDetector?.close()
-            faceDetector = null
-        } catch (_: Exception) {}
-        running = false
-        Log.d(tag, "相机已停止")
+        closeCamera()
+        executor.shutdown()
     }
 }

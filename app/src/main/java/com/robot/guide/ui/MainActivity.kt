@@ -122,7 +122,8 @@ class MainActivity : AppCompatActivity() {
                 }
                 chatAdapter.updateLastMessageWithSource(answer, sourceText, mediaRefs)
                 binding.rvChat.scrollToPosition(chatAdapter.itemCount - 1)
-                tts?.speak(answer)
+                speechRecognizer.pauseForSpeech()
+                tts?.speak(answer, onDone = { speechRecognizer.resumeAfterSpeech() })
                 // AI 回答里如果又提到硬件词，也触发一次（比如"我可以帮你前进..."）
                 actionController.autoTriggerFromText(answer)
             }
@@ -400,7 +401,8 @@ class MainActivity : AppCompatActivity() {
                             val greeting = settings.greeting.ifBlank {
                                 "有什么可以帮到你，我是${settings.robotName}"
                             }
-                            tts?.speak(greeting)
+                            speechRecognizer.pauseForSpeech()
+                            tts?.speak(greeting, onDone = { speechRecognizer.resumeAfterSpeech() })
 
                             // 打招呼动作：活动筋骨 + 头部手臂复位
                             actionController.execute(RobotActionController.Action.COMBO_STRETCH)
