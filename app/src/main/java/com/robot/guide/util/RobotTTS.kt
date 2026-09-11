@@ -1,7 +1,6 @@
 package com.robot.guide.util
 
 import android.content.Context
-import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -112,15 +111,9 @@ class RobotTTS(private val context: Context) {
             params.putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, 1f)
             params.putFloat(TextToSpeech.Engine.KEY_PARAM_PAN, 0f)
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                // API 21+ 用 4 参数版本（带 utteranceId，UtteranceProgressListener 会触发）
-                val utteranceId = "robot_${System.currentTimeMillis()}"
-                tts?.speak(text, TextToSpeech.QUEUE_FLUSH, params, utteranceId)
-            } else {
-                // API 21 以下用 3 参数版本
-                @Suppress("DEPRECATION")
-                tts?.speak(text, TextToSpeech.QUEUE_FLUSH, params)
-            }
+            // minSdk=23 >= LOLLIPOP(21)，直接用 4 参数版本
+            val utteranceId = "robot_${System.currentTimeMillis()}"
+            tts?.speak(text, TextToSpeech.QUEUE_FLUSH, params, utteranceId)
 
             // 兜底：按字数估算时长，确保一定会触发 onDone
             val estimatedMs = (text.length * 200L).coerceAtLeast(2000L)
