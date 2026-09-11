@@ -49,10 +49,9 @@ jobs:
     - name: 📝 Print build log on failure
       if: failure()
       run: |
-        echo "===== BUILD OUTPUT (last 100 lines) ====="
-        tail -n 100 build_output.txt || true
-        echo "===== END BUILD OUTPUT ====="
-        # Write to step summary for API access
+        # Extract error lines and output as GitHub Actions annotations
+        grep -E "^e:|error:|FAILURE|What went wrong" build_output.txt | head -n 20 || true
+        # Also output to step summary
         echo "### Build Output (last 100 lines)" >> $GITHUB_STEP_SUMMARY
         echo '```' >> $GITHUB_STEP_SUMMARY
         tail -n 100 build_output.txt >> $GITHUB_STEP_SUMMARY || true
