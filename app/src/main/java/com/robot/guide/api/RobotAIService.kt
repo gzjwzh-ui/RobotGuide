@@ -32,9 +32,9 @@ class RobotAIService(context: Context) {
         val matchResult = matcher.match(userQuestion, qaLibrary)
 
         if (matchResult != null) {
-            // 匹配到固定答案
+            // 匹配到固定答案（替换模板变量）
             onResult(
-                matchResult.qaItem.answer,
+                resolvePlaceholders(matchResult.qaItem.answer),
                 ChatMessage.Source.LOCAL,
                 matchResult.qaItem.mediaRefs
             )
@@ -50,15 +50,28 @@ class RobotAIService(context: Context) {
             )
             doubao.chat(history + ChatMessage(role = ChatMessage.Role.USER, content = userQuestion)) { success, reply, _ ->
                 if (success) {
-                    onResult(reply, ChatMessage.Source.AI, emptyList())
+                    onResult(resolvePlaceholders(reply), ChatMessage.Source.AI, emptyList())
                 } else {
-                    onResult(getFallbackAnswer(userQuestion), ChatMessage.Source.FALLBACK, emptyList())
+                    onResult(resolvePlaceholders(getFallbackAnswer(userQuestion)), ChatMessage.Source.FALLBACK, emptyList())
                 }
             }
         } else {
             // AI未配置，使用兜底回答
-            onResult(getFallbackAnswer(userQuestion), ChatMessage.Source.FALLBACK, emptyList())
+            onResult(resolvePlaceholders(getFallbackAnswer(userQuestion)), ChatMessage.Source.FALLBACK, emptyList())
         }
+    }
+
+    /**
+     * 替换答案中的模板变量
+     * {robot_name} → 机器人名字
+     * {backend_name} → 后端地址
+     */
+    private fun resolvePlaceholders(text: String): String {
+        return text
+            .replace("{robot_name}", settings.robotName)
+            .replace("{robotName}", settings.robotName)
+            .replace("{backend_name}", settings.backendUrl)
+            .replace("{year}", java.util.Calendar.getInstance().get(java.util.Calendar.YEAR).toString())
     }
 
     /**

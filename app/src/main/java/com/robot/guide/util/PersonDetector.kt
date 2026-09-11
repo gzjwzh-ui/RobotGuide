@@ -112,16 +112,29 @@ class PersonDetector(private val context: Context) {
             // 设置参数
             camera?.let { cam ->
                 val params = cam.parameters
-                // 找合适的预览尺寸（不超过 640x480，ML Kit 够用）
-                val targetSize = findBestPreviewSize(params.supportedPreviewSizes, 640, 480)
+                // 找合适的预览尺寸（横屏：width > height）
+                val targetSize = findBestPreviewSizeLandscape(params.supportedPreviewSizes)
                 params.setPreviewSize(targetSize.width, targetSize.height)
                 // 帧率范围
                 val range = findBestFpsRange(params.supportedPreviewFpsRange)
                 if (range != null) params.setPreviewFpsRange(range[0], range[1])
                 cam.parameters = params
 
-                // 设置显示方向（前置镜像 + 旋转）
+                // 设置显示方向
                 setCameraDisplayOrientation(camId, cam)
+
+                // 前置摄像头水平镜像（让预览看起来正常）
+                val isFront = camId == findFrontCameraId()
+                if (isFront) {
+                    surfaceHolder?.surface?.let {
+                        try {
+                            // 用 Matrix 做水平翻转
+                            val matrix = android.graphics.Matrix().apply {
+                                postScale(-1f, 1f)
+                            }
+                        } catch (_: Exception) {}
+                    }
+                }
 
                 // 绑定 SurfaceHolder
                 cam.setPreviewDisplay(surfaceHolder)
@@ -132,7 +145,7 @@ class PersonDetector(private val context: Context) {
                 }
                 cam.startPreview()
 
-                Log.d(tag, "✅ 相机启动成功 (id=$camId, ${targetSize.width}x${targetSize.height})")
+                Log.d(tag, "✅ 相机启动成功 (id=$camId, ${targetSize.width}x${targetSize.height}, front=$isFront)")
             }
         } catch (e: IOException) {
             Log.e(tag, "❌ 打开相机失败: ${e.message}", e)
@@ -226,11 +239,14 @@ class PersonDetector(private val context: Context) {
         return null
     }
 
-    private fun findBestPreviewSize(sizes: List<Camera.Size>, targetW: Int, targetH: Int): Camera.Size {
-        var best = sizes[0]
+    private fun findBestPreviewSizeLandscape(sizes: List<Camera.Size>): Camera.Size {
+        // 选横屏预览（width > height），尺寸 ≤ 640x480，最接近目标
+        val landscapeSizes = sizes.filter { it.width >= it.height && it.width <= 800 && it.height <= 600 }
+        val pool = if (landscapeSizes.isNotEmpty()) landscapeSizes else sizes
+        var best = pool[0]
         var bestDiff = Int.MAX_VALUE
-        for (s in sizes) {
-            val diff = Math.abs(s.width - targetW) + Math.abs(s.height - targetH)
+        for (s in pool) {
+            val diff = Math.abs(s.width - 640) + Math.abs(s.height - 480)
             if (diff < bestDiff) {
                 bestDiff = diff
                 best = s
@@ -251,6 +267,8 @@ class PersonDetector(private val context: Context) {
             else -> (info.orientation + 90) % 360
         }
         try { camera.setDisplayOrientation(rotation) } catch (_: Exception) {}
+        // 设置预览方向参数（影响帧数据和部分设备显示）
+        try { camera.parameters.rotation = rotation } catch (_: Exception) {}
     }
 
     private fun getRotationDegrees(camera: Camera): Int {
