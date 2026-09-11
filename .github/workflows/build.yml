@@ -49,8 +49,10 @@ jobs:
     - name: 📝 Print build log on failure
       if: failure()
       run: |
-        # Extract error lines and output as GitHub Actions annotations
-        grep -E "^e:|error:|FAILURE|What went wrong" build_output.txt | head -n 20 || true
+        # Output build errors as GitHub Actions annotations (visible in API)
+        grep -E "^e:|error:|FAILURE|What went wrong" build_output.txt | head -n 30 | while IFS= read -r line; do
+          echo "::error::$line"
+        done || true
         # Also output to step summary
         echo "### Build Output (last 100 lines)" >> $GITHUB_STEP_SUMMARY
         echo '```' >> $GITHUB_STEP_SUMMARY
