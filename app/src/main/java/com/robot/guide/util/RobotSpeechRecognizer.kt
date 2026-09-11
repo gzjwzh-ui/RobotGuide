@@ -50,30 +50,31 @@ class RobotSpeechRecognizer(private val context: Context) {
         const val MSG_UNPAUSE = 0x5
     }
 
-    private val messageHandler = Handler(Looper.getMainLooper()) { msg ->
-        when (msg.what) {
-            MSG_START -> doStartListening(currentLanguage)
-            MSG_STOP -> doStopListening()
-            MSG_RESTART -> {
-                Log.d(tag, "🔄 自动重启监听 (连续错误 $consecutiveErrors)")
-                doStopListening()
-                doStartListening(currentLanguage)
-            }
-            MSG_ERROR_RECOVER -> {
-                val delay = if (consecutiveErrors >= maxConsecutiveErrors) 3000L else 800L
-                Log.d(tag, "⏱️ 错误恢复延迟 ${delay}ms (连续错误 $consecutiveErrors)")
-                consecutiveErrors = 0
-                messageHandler.removeMessages(MSG_RESTART)
-                messageHandler.sendEmptyMessageDelayed(MSG_RESTART, delay)
-            }
-            MSG_UNPAUSE -> {
-                pausedForSpeech = false
-                if (listening) return@Handler true
-                Log.d(tag, "🔓 TTS 说完，恢复监听")
-                doStartListening(currentLanguage)
+    private val messageHandler: Handler = object : Handler(Looper.getMainLooper()) {
+        override fun handleMessage(msg: android.os.Message) {
+            when (msg.what) {
+                MSG_START -> doStartListening(currentLanguage)
+                MSG_STOP -> doStopListening()
+                MSG_RESTART -> {
+                    Log.d(tag, "🔄 自动重启监听 (连续错误 $consecutiveErrors)")
+                    doStopListening()
+                    doStartListening(currentLanguage)
+                }
+                MSG_ERROR_RECOVER -> {
+                    val delay = if (consecutiveErrors >= maxConsecutiveErrors) 3000L else 800L
+                    Log.d(tag, "⏱️ 错误恢复延迟 ${delay}ms (连续错误 $consecutiveErrors)")
+                    consecutiveErrors = 0
+                    removeMessages(MSG_RESTART)
+                    sendEmptyMessageDelayed(MSG_RESTART, delay)
+                }
+                MSG_UNPAUSE -> {
+                    pausedForSpeech = false
+                    if (listening) return
+                    Log.d(tag, "🔓 TTS 说完，恢复监听")
+                    doStartListening(currentLanguage)
+                }
             }
         }
-        true
     }
 
     fun isSupported(): Boolean {

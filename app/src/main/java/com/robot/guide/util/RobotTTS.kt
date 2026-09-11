@@ -57,10 +57,10 @@ class RobotTTS(context: Context) {
             pendingText = text
             return
         }
-        val params = HashMap<String, String>()
-        params[TextToSpeech.Engine.KEY_PARAM_VOLUME] = "1"
-        params[TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID] = "robot_tts_${System.currentTimeMillis()}"
-        tts?.speak(text, TextToSpeech.QUEUE_FLUSH, params, "robot_tts_${System.currentTimeMillis()}")
+        val params = android.os.Bundle()
+        params.putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, 1f)
+        val utteranceId = "robot_tts_${System.currentTimeMillis()}"
+        tts?.speak(text, TextToSpeech.QUEUE_FLUSH, params, utteranceId)
 
         // 尝试用 UtteranceProgressListener 获得准确完成事件
         try {

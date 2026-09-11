@@ -254,13 +254,15 @@ class PersonDetector(private val context: Context) {
     }
 
     private fun getRotationDegrees(camera: Camera): Int {
-        val params = camera.parameters
-        // ML Kit 需要的 rotation 值
-        return when (params.cameraOrientation) {
-            90 -> 90
-            180 -> 180
-            270 -> 270
-            else -> 0
+        // ML Kit 需要的 rotation 值（从 Camera.CameraInfo 获取）
+        return try {
+            val info = Camera.CameraInfo()
+            // 默认用前置摄像头的 orientation
+            val camId = findFrontCameraId() ?: 0
+            Camera.getCameraInfo(camId, info)
+            info.orientation
+        } catch (_: Exception) {
+            0
         }
     }
 
