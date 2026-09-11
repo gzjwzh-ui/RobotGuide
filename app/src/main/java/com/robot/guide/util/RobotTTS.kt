@@ -36,13 +36,20 @@ class RobotTTS(private val context: Context) {
                 val locale = parseLocale(lang)
                 val result = tts?.setLanguage(locale)
                 Log.d(tag, "TTS setLanguage($locale) result=$result")
+
                 if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
-                    // 尝试降级到中文
-                    val fallback = tts?.setLanguage(Locale.CHINESE)
-                    Log.w(tag, "首选语言不支持，降级到中文 result=$fallback")
-                    if (fallback == TextToSpeech.LANG_MISSING_DATA || fallback == TextToSpeech.LANG_NOT_SUPPORTED) {
-                        // 连中文都不支持，试试英文
-                        tts?.setLanguage(Locale.US)
+                    // 粤语不支持时，尝试台湾繁体中文
+                    val fallback1 = tts?.setLanguage(Locale.TRADITIONAL_CHINESE)
+                    Log.w(tag, "首选语言不支持，尝试繁体中文 result=$fallback1")
+                    if (fallback1 == TextToSpeech.LANG_MISSING_DATA || fallback1 == TextToSpeech.LANG_NOT_SUPPORTED) {
+                        // 再尝试简体中文
+                        val fallback2 = tts?.setLanguage(Locale.SIMPLIFIED_CHINESE)
+                        Log.w(tag, "繁体不支持，尝试简体 result=$fallback2")
+                        if (fallback2 == TextToSpeech.LANG_MISSING_DATA || fallback2 == TextToSpeech.LANG_NOT_SUPPORTED) {
+                            // 最后尝试英文
+                            val fallback3 = tts?.setLanguage(Locale.US)
+                            Log.w(tag, "中文都不支持，降级到英文 result=$fallback3")
+                        }
                     }
                 }
 
@@ -85,7 +92,8 @@ class RobotTTS(private val context: Context) {
         return when {
             lang.startsWith("yue") -> Locale("zh", "HK")
             lang.startsWith("en") -> Locale.US
-            else -> Locale.CHINESE
+            lang.startsWith("zh-CN") || lang.startsWith("zh_CN") -> Locale.SIMPLIFIED_CHINESE
+            else -> Locale.SIMPLIFIED_CHINESE
         }
     }
 

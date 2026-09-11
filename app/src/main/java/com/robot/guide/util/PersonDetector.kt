@@ -37,9 +37,9 @@ class PersonDetector(private val context: Context) {
 
     // 状态跟踪
     private var lastTriggerTime = 0L
-    private val cooldownMs = 10000L
+    private val cooldownMs = 60000L  // 60秒冷却，避免重复问"有什么可以帮到你"
     private var consecutiveFramesWithoutFace = 0
-    private val leaveThreshold = 5   // 连续 5 帧没人 → 触发 onPersonLeave
+    private val leaveThreshold = 10  // 连续 10 帧没人 → 触发 onPersonLeave
     private var wasFaceDetected = false
 
     data class Callback(
@@ -262,9 +262,10 @@ class PersonDetector(private val context: Context) {
     private fun setCameraDisplayOrientation(cameraId: Int, camera: Camera) {
         val info = Camera.CameraInfo()
         Camera.getCameraInfo(cameraId, info)
+        // 向左转90度修正方向：原值基础上逆时针90度（即+270等价于-90）
         val rotation = when {
-            (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) -> (info.orientation + 270) % 360
-            else -> (info.orientation + 90) % 360
+            (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) -> (info.orientation + 180) % 360
+            else -> (info.orientation + 0) % 360
         }
         try { camera.setDisplayOrientation(rotation) } catch (_: Exception) {}
     }

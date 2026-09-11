@@ -130,31 +130,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ========== 语音输入 ==========
-
-    private fun startVoiceInput() {
-        if (!speechRecognizer.isSupported()) {
-            Toast.makeText(this, "设备不支持语音识别，请手动输入文字", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        val lang = settings.robotLanguage
-
-        speechRecognizer.startListening(
-            language = lang,
-            onResult = { text ->
-                if (text.isNotBlank()) {
-                    sendQuestion(text)
-                }
-            },
-            onError = { msg ->
-                if (msg != "没检测到语音") {
-                    Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
-                }
-            }
-        )
-    }
-
     // ========== 导航栏 ==========
 
     private fun setupNavigation() {
@@ -236,21 +211,34 @@ class MainActivity : AppCompatActivity() {
     private fun setupInputBar() {
         binding.btnSend.setOnClickListener { sendQuestion(binding.etInput.text?.toString() ?: "") }
 
-        // 语音按钮：长按开始录音，松开发送
-        binding.btnVoice.setOnClickListener {
-            if (speechRecognizer.isListening()) {
-                speechRecognizer.stopListening()
-            } else {
-                startVoiceInput()
-            }
-        }
-
         binding.etInput.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEND) {
                 sendQuestion(binding.etInput.text?.toString() ?: "")
                 true
             } else false
         }
+    }
+
+    /**
+     * 自动启动语音识别（连续监听模式）
+     */
+    private fun startAutoListening() {
+        if (!speechRecognizer.isSupported()) return
+
+        val lang = settings.robotLanguage
+        speechRecognizer.startListening(
+            language = lang,
+            onResult = { text ->
+                if (text.isNotBlank()) {
+                    sendQuestion(text)
+                }
+            },
+            onError = { msg ->
+                if (msg != "没检测到语音" && msg != "没听清，请再说一次" && msg != "长时间没说话") {
+                    Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+                }
+            }
+        )
     }
 
     // ========== 机器快捷动作 + 硬件状态 ==========
@@ -402,7 +390,11 @@ class MainActivity : AppCompatActivity() {
                                 "有什么可以帮到你，我是${settings.robotName}"
                             }
                             speechRecognizer.pauseForSpeech()
-                            tts?.speak(greeting, onDone = { speechRecognizer.resumeAfterSpeech() })
+                            tts?.speak(greeting, onDone = {
+                                speechRecognizer.resumeAfterSpeech()
+                                // 欢迎语说完后自动启动语音识别
+                                startAutoListening()
+                            })
 
                             // 打招呼动作：活动筋骨 + 头部手臂复位
                             actionController.execute(RobotActionController.Action.COMBO_STRETCH)
@@ -436,6 +428,9 @@ class MainActivity : AppCompatActivity() {
                     }
                 )
             )
+        } else {
+            // 未启用人脸检测也自动启动语音识别
+            startAutoListening()
         }
     }
 
@@ -444,6 +439,8 @@ class MainActivity : AppCompatActivity() {
         if (settings.personDetection && personDetector.isSupported()) {
             try { personDetector.stop() } catch (_: Exception) {}
             initFeatures()
+        } else {
+            startAutoListening()
         }
         binding.tvRobotName.text = settings.robotName
     }

@@ -167,25 +167,8 @@ class MediaRepository(context: Context) {
     }
 
     /**
-     * Mock 视频 —— 国内可访问的公开 CDN
-     * 注意：这些是公共测试资源，正式部署应放自己 NAS
+     * Mock 视频 —— 空列表（后端未配置时显示提示）
+     * 如果后端配置了 /api/videos，会从后端拉取真实视频
      */
-    private fun getMockVideos(): List<MediaFile> = listOf(
-        MediaFile(
-            id = "v1", type = MediaFile.Type.VIDEO,
-            name = "展厅介绍",
-            // 国内可用的测试视频
-            path = "https://media.w3.org/2010/05/bunny/trailer.mp4"
-        ),
-        MediaFile(
-            id = "v2", type = MediaFile.Type.VIDEO,
-            name = "机器人演示",
-            path = "https://media.w3.org/2010/05/video/movie_300.mp4"
-        ),
-        MediaFile(
-            id = "v3", type = MediaFile.Type.VIDEO,
-            name = "车辆讲解",
-            path = "https://media.w3.org/2010/05/sintel/trailer_hd.mp4"
-        )
-    )
+    private fun getMockVideos(): List<MediaFile> = emptyList()
 }

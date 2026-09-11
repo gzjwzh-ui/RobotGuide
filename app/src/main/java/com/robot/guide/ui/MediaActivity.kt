@@ -2,17 +2,17 @@ package com.robot.guide.ui
 
 import android.os.Bundle
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
+import android.widget.VideoView
 import androidx.appcompat.app.AppCompatActivity
 import com.robot.guide.R
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import androidx.media3.common.MediaItem
-import androidx.media3.exoplayer.ExoPlayer
 import com.bumptech.glide.Glide
 import com.robot.guide.data.Vehicle
 import com.robot.guide.databinding.ActivityMediaBinding
@@ -20,12 +20,16 @@ import com.robot.guide.util.MediaRepository
 
 /**
  * 媒体展示界面 - 车辆图片网格 + 视频列表
+ *
+ * 修复点：
+ *   1. 用 RecyclerView + Fragment 切换代替 ViewPager2（更稳定）
+ *   2. 视频用 VideoView（系统组件，不依赖 ExoPlayer）
+ *   3. 图片用 Glide 加载本地 drawable
  */
 class MediaActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMediaBinding
     private val repo by lazy { MediaRepository(this) }
-    private var exoPlayer: ExoPlayer? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -37,59 +41,39 @@ class MediaActivity : AppCompatActivity() {
         val tabIndex = intent.getIntExtra("tab", 0)
         binding.tvTitle.text = if (tabIndex == 0) "车辆展示" else "车辆视频"
 
-        binding.viewPager.adapter = MediaPagerAdapter(tabIndex)
-        binding.viewPager.currentItem = tabIndex
-
         binding.tabLayout.addOnTabSelectedListener(object : com.google.android.material.tabs.TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: com.google.android.material.tabs.TabLayout.Tab) {
-                binding.viewPager.currentItem = tab.position
                 binding.tvTitle.text = if (tab.position == 0) "车辆展示" else "车辆视频"
+                showTab(tab.position)
             }
             override fun onTabUnselected(tab: com.google.android.material.tabs.TabLayout.Tab) {}
             override fun onTabReselected(tab: com.google.android.material.tabs.TabLayout.Tab) {}
         })
+
+        // 设置默认 Tab
+        binding.tabLayout.getTabAt(tabIndex)?.select()
+        showTab(tabIndex)
     }
 
-    override fun onStop() {
-        super.onStop()
-        exoPlayer?.stop()
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        exoPlayer?.release()
-        exoPlayer = null
-    }
-
-    inner class MediaPagerAdapter(private val initialTab: Int) :
-        RecyclerView.Adapter<RecyclerView.ViewHolder>() {
-
-        override fun getItemCount() = 2
-
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
-            val rv = RecyclerView(parent.context).apply {
-                layoutManager = GridLayoutManager(parent.context, if (viewType == 0) 3 else 1)
-                setPadding(16, 16, 16, 16)
-            }
-            return object : RecyclerView.ViewHolder(rv) {}
+    private fun showTab(index: Int) {
+        if (index == 0) {
+            showVehicleGrid()
+        } else {
+            showVideoList()
         }
+    }
 
-        override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-            val rv = holder.itemView as RecyclerView
-            if (position == 0) {
-                rv.adapter = VehicleGridAdapter()
-                repo.loadVehicles { vehicles ->
-                    runOnUiThread {
-                        (rv.adapter as VehicleGridAdapter).submitList(vehicles)
-                    }
-                }
-            } else {
-                rv.adapter = VideoListAdapter()
-                repo.loadVideos { videos ->
-                    runOnUiThread {
-                        (rv.adapter as VideoListAdapter).submitList(videos)
-                    }
-                }
+    // ========== 车辆展示 ==========
+
+    private fun showVehicleGrid() {
+        binding.viewPager.visibility = View.GONE
+        binding.rvContent.visibility = View.VISIBLE
+        binding.rvContent.layoutManager = GridLayoutManager(this, 3)
+        binding.rvContent.adapter = VehicleGridAdapter()
+
+        repo.loadVehicles { vehicles ->
+            runOnUiThread {
+                (binding.rvContent.adapter as VehicleGridAdapter).submitList(vehicles)
             }
         }
     }
@@ -102,7 +86,7 @@ class MediaActivity : AppCompatActivity() {
             notifyDataSetChanged()
         }
 
-        inner class VH(view: android.view.View) : RecyclerView.ViewHolder(view) {
+        inner class VH(view: View) : RecyclerView.ViewHolder(view) {
             val iv: ImageView = view.findViewById(R.id.ivVehicle)
             val tv: TextView = view.findViewById(R.id.tvVehicleName)
         }
@@ -118,11 +102,33 @@ class MediaActivity : AppCompatActivity() {
         override fun onBindViewHolder(holder: VH, position: Int) {
             val v = vehicles[position]
             holder.tv.text = v.name
-            Glide.with(this@MediaActivity)
-                .load(v.thumbnail)
-                .placeholder(R.drawable.bg_card)
-                .centerCrop()
-                .into(holder.iv)
+            try {
+                Glide.with(this@MediaActivity)
+                    .load(v.thumbnail)
+                    .placeholder(R.drawable.placeholder_car1)
+                    .centerCrop()
+                    .into(holder.iv)
+            } catch (e: Exception) {
+                holder.iv.setImageResource(R.drawable.placeholder_car1)
+            }
+        }
+    }
+
+    // ========== 视频列表 ==========
+
+    private fun showVideoList() {
+        binding.viewPager.visibility = View.GONE
+        binding.rvContent.visibility = View.VISIBLE
+        binding.rvContent.layoutManager = LinearLayoutManager(this)
+        binding.rvContent.adapter = VideoListAdapter()
+
+        repo.loadVideos { videos ->
+            runOnUiThread {
+                if (videos.isEmpty()) {
+                    Toast.makeText(this, "暂无视频，请在后台配置视频资源", Toast.LENGTH_LONG).show()
+                }
+                (binding.rvContent.adapter as VideoListAdapter).submitList(videos)
+            }
         }
     }
 
@@ -134,7 +140,7 @@ class MediaActivity : AppCompatActivity() {
             notifyDataSetChanged()
         }
 
-        inner class VH(view: android.view.View) : RecyclerView.ViewHolder(view) {
+        inner class VH(view: View) : RecyclerView.ViewHolder(view) {
             val tv: TextView = view.findViewById(R.id.tvVideoName)
         }
 
@@ -150,18 +156,45 @@ class MediaActivity : AppCompatActivity() {
             val v = videos[position]
             holder.tv.text = v.name
             holder.itemView.setOnClickListener {
-                try {
-                    if (exoPlayer == null) {
-                        exoPlayer = ExoPlayer.Builder(this@MediaActivity).build()
-                    }
-                    exoPlayer?.setMediaItem(MediaItem.fromUri(v.path))
-                    exoPlayer?.prepare()
-                    exoPlayer?.play()
-                    Toast.makeText(this@MediaActivity, "播放: ${v.name}", Toast.LENGTH_SHORT).show()
-                } catch (e: Exception) {
-                    Toast.makeText(this@MediaActivity, "播放失败", Toast.LENGTH_SHORT).show()
-                }
+                playVideo(v.path, v.name)
             }
+        }
+    }
+
+    private fun playVideo(url: String, name: String) {
+        try {
+            val videoView = binding.videoView
+            binding.videoContainer.visibility = View.VISIBLE
+            binding.rvContent.visibility = View.GONE
+            binding.tabLayout.visibility = View.GONE
+
+            videoView.setVideoPath(url)
+            videoView.setOnPreparedListener { mp ->
+                mp.isLooping = false
+                videoView.start()
+            }
+            videoView.setOnCompletionListener {
+                Toast.makeText(this, "播放完成: $name", Toast.LENGTH_SHORT).show()
+            }
+            videoView.setOnErrorListener { _, what, extra ->
+                Toast.makeText(this, "视频播放失败 (错误码: $what/$extra)", Toast.LENGTH_SHORT).show()
+                binding.videoContainer.visibility = View.GONE
+                binding.rvContent.visibility = View.VISIBLE
+                binding.tabLayout.visibility = View.VISIBLE
+                true
+            }
+
+            // 返回按钮
+            binding.btnVideoBack.setOnClickListener {
+                videoView.stopPlayback()
+                binding.videoContainer.visibility = View.GONE
+                binding.rvContent.visibility = View.VISIBLE
+                binding.tabLayout.visibility = View.VISIBLE
+            }
+
+            Toast.makeText(this, "正在播放: $name", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Toast.makeText(this, "播放失败: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
 }

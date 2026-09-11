@@ -59,9 +59,9 @@
         <!-- 媒体展示界面 -->
         <activity
             android:name=".ui.MediaActivity"
-            android:screenOrientation="unspecified"
+            android:screenOrientation="landscape"
             android:keepScreenOn="true"
-            android:theme="@style/Theme.RobotGuide.Fullscreen" />
+            android:configChanges="orientation|screenSize|keyboardHidden" />
 
         <!-- 设置界面 -->
         <activity
