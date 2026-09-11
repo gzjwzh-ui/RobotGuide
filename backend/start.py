@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 """
 展厅机器人后台 - 单文件版（一键启动）
 运行: python start.py
@@ -39,7 +39,9 @@ def get_db():
 
 @app.teardown_appcontext
 def close_db(exc):
-    getattr(g, "db", None)?.close()
+    db = getattr(g, "db", None)
+    if db is not None:
+        db.close()
 
 def init_db():
     db = sqlite3.connect(DB_PATH)
